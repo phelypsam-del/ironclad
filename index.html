@@ -518,7 +518,7 @@ body{font-weight:500}
         <div class="chead"><p class="pkind">A new tale begins in Ashford</p><h2 class="ptitle">Who are you?</h2></div>
         <p class="pblurb">You are a peasant with a rusty sword, a homespun tunic and a grudge. No armour, no name anyone knows. Shape the face the realm will remember.</p>
         <div class="makewrap">
-          <div class="makeprev"><canvas id="mkFace" width="22" height="22" aria-label="Your face"></canvas><canvas id="mkBody" width="54" height="66" aria-label="Your peasant"></canvas></div>
+          <div class="makeprev"><canvas id="mkFace" width="64" height="64" aria-label="Your face"></canvas><canvas id="mkBody" width="54" height="66" aria-label="Your peasant"></canvas></div>
           <div class="makeopts">
             <label class="mkrow mkname"><span>Name</span><input id="mkName" type="text" maxlength="22" autocomplete="off" spellcheck="false"></label>
             <div id="mkOpts"></div>
@@ -2579,44 +2579,108 @@ function openCity(ci){if(G.state!=='menu')toMenu('pCity');else showPanel('pCity'
 let DRAFT=null;
 function openMaker(fresh){G.mkFresh=fresh;DRAFT={...(CAMP.look||defaultLook())};if(G.state!=='menu')toMenu('pMake');else showPanel('pMake');$('mkName').value=DRAFT.name;renderMaker();$('mkName').focus({preventScroll:true});}
 function drawPortrait(cv,look,tunicR){
-  const Wp=40,Hp=40,B=new Uint32Array(Wp*Hp),L=resolveLook(look),SK=L.skin,HR=L.hair,TN=tunicR||L.tunic,dz=(x,y)=>BAY[(y&3)*4+(x&3)];
-  const P=(x,y,c)=>{x|=0;y|=0;if(x>=0&&y>=0&&x<Wp&&y<Hp)B[y*Wp+x]=c;},rp=(R,s,x,y)=>R[clamp(Math.floor(s*(R.length-1)+dz(x,y)*.9),0,R.length-1)];
-  const cx=19.5,cy=18,rx=8.6,ry=10.6,inHead=(x,y)=>((x+.5-cx)/rx)**2+((y+.5-cy)/ry)**2<=1;
-  for(let y=0;y<Hp;y++)for(let x=0;x<Wp;x++)B[y*Wp+x]=pack(26+y*.4,20+y*.3,18+y*.2);
-  // shoulders and tunic with a laced neckline
-  for(let y=31;y<Hp;y++)for(let x=0;x<Wp;x++){const half=7+(y-31)*2.2;if(Math.abs(x+.5-cx)>half)continue;const s=.35+.4*(1-(x)/Wp)-(y>36?.1:0);P(x,y,rp(TN,s,x,y));}
-  for(let y=26;y<34;y++)for(let x=15;x<25;x++){const s=.45-(y-26)*.03+(x<19?.12:-.08);P(x,y,rp(SK,s,x,y));}
-  for(let y=31;y<36;y++){const w=Math.max(0,4-(y-31));for(let x=Math.round(cx-w);x<=Math.round(cx+w-1);x++)P(x,y,rp(SK,.4,x,y));}
-  for(const y of [32,34])P(19,y,LEATHER[1]);
+  const Wp=64,Hp=64,B=new Uint32Array(Wp*Hp),L=resolveLook(look),TN=tunicR||L.tunic,dz=(x,y)=>BAY[(y&3)*4+(x&3)];
+  const un=c=>[c&255,(c>>8)&255,(c>>16)&255];
+  // stretch the 4-5 stop palettes into many tones so the face reads as modelled flesh rather than flat bands
+  const smooth=(R,n)=>{const C=R.map(un),o=[];for(let i=0;i<n;i++){const t=i/(n-1)*(C.length-1),a=Math.floor(t),b=Math.min(C.length-1,a+1),u=t-a;o.push([C[a][0]+(C[b][0]-C[a][0])*u,C[a][1]+(C[b][1]-C[a][1])*u,C[a][2]+(C[b][2]-C[a][2])*u]);}return o;};
+  const SKn=smooth(L.skin,16),HRn=smooth(L.hair,10),TNn=smooth(TN,10);
+  const tone=(R,s,x,y,warm)=>{const i=clamp(Math.floor(s*(R.length-1)+dz(x,y)*.75+.1),0,R.length-1),c=R[i],w=warm||0;return pack(c[0]+w*20,c[1]-w*3,c[2]-w*6);};
+  const P=(x,y,c)=>{x|=0;y|=0;if(x>=0&&y>=0&&x<Wp&&y<Hp)B[y*Wp+x]=c;};
+  const mixP=(x,y,rgb,a)=>{x|=0;y|=0;if(x<0||y<0||x>=Wp||y>=Hp)return;const c=un(B[y*Wp+x]);B[y*Wp+x]=pack(c[0]+(rgb[0]-c[0])*a,c[1]+(rgb[1]-c[1])*a,c[2]+(rgb[2]-c[2])*a);};
+  const Lv=(()=>{const v=[-.62,-.5,.6],l=Math.hypot(...v);return v.map(a=>a/l);})();
+  const cx=32,cy=26,RX=13.8,RY=18,K=RX/12.6;
+  const g=(u,v,u0,v0,su,sv)=>Math.exp(-(((u-u0)/su)**2+((v-v0)/sv)**2));
+  // face outline: an ellipse whose lower half narrows into a square, weathered jaw
+  const halfW=v=>{const base=Math.sqrt(Math.max(0,1-v*v));const jaw=v>.15?1-.28*Math.min(1,(v-.15)/.8)**1.3:1;return base*jaw*(v>.55?1+.14*(v-.55):1);};
+  const inFace=(x,y)=>{const v=(y+.5-cy)/RY;if(v<-1||v>1)return false;return Math.abs((x+.5-cx)/RX)<=halfW(v);};
+  const height=(x,y)=>{const u=(x+.5-cx)/RX,v=(y+.5-cy)/RY,hw=halfW(v);if(hw<=0)return 0;const uu=clamp(u/hw,-1,1);let h=Math.sqrt(1-uu*uu)*Math.sqrt(Math.max(0,1-v*v*.55))*13;
+    for(const s of [-1,1]){h+=1.6*g(u,v,s*.33,-.21,.25,.06);h-=2.4*g(u,v,s*.33,-.07,.17,.085);h+=1.0*g(u,v,s*.33,-.06,.1,.045);
+      h+=1.3*g(u,v,s*.53,.1,.16,.1);h-=1.2*g(u,v,s*.47,.4,.15,.13);h+=.6*g(u,v,s*.12,.42,.06,.05);
+      if(v>.42&&v<.7){const t=clamp((v-.42)/.26,0,1);h-=.8*Math.exp(-(((u-s*(.16+.13*t))/.04)**2));}
+      h-=.5*g(u,v,s*.33,.07,.16,.04);}
+    h+=.8*g(u,v,0,-.2,.1,.07);
+    const nr=clamp((v+.18)/.56,0,1);if(v>-.2&&v<.42)h+=(1+2.8*nr)*Math.exp(-((u/.08)**2));
+    h+=1.6*g(u,v,0,.38,.1,.07);h+=.8*g(u,v,0,.6,.3,.12);h+=.35*g(u,v,0,.57,.16,.03);h+=.6*g(u,v,0,.65,.13,.035);h-=.5*g(u,v,0,.72,.14,.03);h+=1.1*g(u,v,0,.86,.18,.1);
+    return h;};
+  // backdrop: dark stone wall, warm torchlight from the left
+  for(let y=0;y<Hp;y++)for(let x=0;x<Wp;x++){const gl=Math.max(0,1-Math.hypot(x-4,y-12)/62);const blk=((y>>3)+((x+((y>>3)&1)*6)>>4))&1,n=(hash2(x>>1,y>>1)-.5)*4+(y%8===0||((x+((y>>3)&1)*8)%16===0)?-4:0)+blk*2;
+    B[y*Wp+x]=pack(16+gl*38+n+dz(x,y)*3,13+gl*22+n,14+gl*9+n);}
+  // shoulders, tunic, neckline
+  const sy=Math.round(cy+RY+4);
+  for(let y=sy;y<Hp;y++)for(let x=0;x<Wp;x++){const half=12+(y-sy)*2.6;const dx=x+.5-cx;if(Math.abs(dx)>half)continue;
+    const nx=dx/Math.max(half,1),s=.55-nx*.34-(y-sy)/22*.15+((x*3+y)%9===0?-.07:0)-(Math.abs(dx)<5&&y>sy+5?.1:0);P(x,y,tone(TNn,clamp(s,0,1),x,y));
+    if(Math.abs(dx)>half-1)P(x,y,tone(TNn,.06,x,y));}
+  // neck, darkened by the jaw's shadow
+  for(let y=cy+12;y<sy+8;y++)for(let x=0;x<Wp;x++){const dx=x+.5-cx,w=7.4*K/1.17+(y>sy-2?(y-sy+2)*.9:0);if(Math.abs(dx)>w)continue;
+    let s=.6-dx/w*.36;const sh=1-(y-(cy+RY-2))/6;if(sh>0)s-=.32*sh;if(Math.abs(dx+3)<1.2&&y>cy+14)s-=.08;if(Math.abs(dx-3.5)<1&&y>cy+14)s+=.05;P(x,y,tone(SKn,clamp(s,0,1),x,y));}
+  // V-necked tunic opening with a turned collar and lacing
+  for(let y=sy-1;y<sy+10;y++){const w=6.5-(y-sy)*.68;if(w<=0)continue;for(let x=Math.round(cx-w-1);x<=Math.round(cx+w);x++){const dx=x+.5-cx;
+      if(Math.abs(dx)<w)P(x,y,tone(SKn,clamp(.46-dx/16-(y-sy)*.015,0,1),x,y));else if(Math.abs(dx)<w+1.3)P(x,y,tone(TNn,dx<0?.8:.4,x,y));else if(Math.abs(dx)<w+2.2)P(x,y,tone(TNn,.1,x,y));}}
+  for(let y=sy+3;y<sy+9;y+=2){P(31,y,LEATHER[2]);P(33,y,LEATHER[2]);P(32,y+1,LEATHER[1]);}
   // ears
-  for(const ex of [10,28])for(let y=16;y<22;y++)for(let x=ex;x<ex+2;x++)P(x,y,rp(SK,ex<20?.5:.25,x,y));P(10,18,SK[1]);P(29,18,SK[1]);
-  // face
-  for(let y=6;y<30;y++)for(let x=9;x<31;x++)if(inHead(x,y)){const nx=(x+.5-cx)/rx,ny=(y+.5-cy)/ry;let s=.62-nx*.3-ny*.12-(nx*nx+ny*ny>.75?.15:0);if(y>25&&Math.abs(nx)>.45)s-=.12;P(x,y,rp(SK,s,x,y));}
-  // brows, eyes, nose, mouth
-  const HRdk=HR,eyeC=L.eye[0];
-  for(const [x0,dir] of [[14,1],[21,-1]]){for(let i=0;i<4;i++)P(x0+i,14+(i===0&&dir>0||i===3&&dir<0?1:0),HRdk[1]);
-    P(x0,17,SK[1]);for(let i=0;i<3;i++){P(x0+i+(dir>0?0:1),17,pack(236,230,220));}P(x0+1+(dir>0?0:1),17,eyeC);P(x0+1+(dir>0?0:1),18,pack(20,14,12));P(x0+(dir>0?0:1),18,pack(236,230,220));P(x0+2+(dir>0?0:1),18,pack(214,206,196));
-    for(let i=0;i<4;i++)P(x0+i,16,SK[1]);}
-  for(let y=18;y<23;y++)P(20,y,SK[1]);P(19,22,SK[0]);P(21,22,SK[0]);P(20,23,SK[2]);P(18,21,SK[3]);
-  for(let x=17;x<23;x++)P(x,25,LIPS[1]);P(16,24,SK[1]);P(23,24,SK[1]);for(let x=18;x<22;x++)P(x,26,LIPS[3]);P(20,27,SK[1]);
+  for(const s of [-1,1]){const ex=cx+s*RX*.97;for(let y=cy-6;y<cy+7;y++)for(let x=Math.round(ex-3);x<Math.round(ex+4);x++){const du=(x+.5-ex)/2.7,dv=(y+.5-(cy+.3))/6;if(du*du+dv*dv>1)continue;
+      let s2=s<0?.55:.28;if(Math.abs(du+s*.2)<.42&&Math.abs(dv)<.62)s2-=.2;if(Math.abs(du+s*.2)<.42&&dv>.2&&dv<.55)s2+=.08;P(x,y,tone(SKn,clamp(s2,0,1),x,y,.7));}}
+  // the face, lit through a normal map built from the bone structure above
+  const AO=(x,y)=>{let a=0;for(const [dx,dy] of [[-2,0],[2,0],[0,-2],[0,2]])a+=height(x+dx,y+dy);return a/4-height(x,y);};
+  for(let y=0;y<Hp;y++)for(let x=0;x<Wp;x++){if(!inFace(x,y))continue;
+    const hx=height(x+1,y)-height(x-1,y),hy=height(x,y+1)-height(x,y-1);let n=[-hx/2,-hy/2,1];const l=Math.hypot(...n);n=n.map(a=>a/l);
+    const u=(x+.5-cx)/RX,v=(y+.5-cy)/RY;
+    let s=.04+.98*Math.max(0,n[0]*Lv[0]+n[1]*Lv[1]+n[2]*Lv[2]);s-=clamp(AO(x,y)*.13,-.06,.3);
+    if(v>.72)s-=.07;if(u>.58&&n[0]>.3)s+=.1;
+    const spec=Math.pow(Math.max(0,n[0]*-.35+n[1]*-.45+n[2]*.82),18)*.25;s+=spec;
+    const warm=.6*g(u,v,0,.38,.13,.09)+.5*(g(u,v,-.5,.22,.2,.14)+g(u,v,.5,.22,.2,.14))+.3*g(u,v,0,.63,.16,.06);
+    P(x,y,tone(SKn,clamp(s,0,1),x,y,warm));}
+  // weathering: a thin old scar and pores so the skin isn't plastic
+  for(let y=0;y<Hp;y++)for(let x=0;x<Wp;x++)if(inFace(x,y)&&hash2(x*13,y*7)<.035)mixP(x,y,un(SKn[4]),.18);
+  if((look.name||'').length%3===0){for(let k=0;k<6;k++)mixP(cx+6+k*.4,cy-6+k,[150,96,86],.45);}
+  // eyes: hooded, narrowed and level — a man who has seen the lists
+  const ey=Math.round(cy-1),eyeC=un(L.eye[0]),eo=Math.round(4.8*K);
+  for(const s of [-1,1]){const ex=Math.round(cx+s*eo-(s>0?1:0));
+    const shape=[[-3,0],[-2,0],[-1,0],[0,0],[1,0],[2,0],[3,0],[-2,1],[-1,1],[0,1],[1,1],[2,1]];
+    for(const [dx,dy] of shape){const edge=Math.abs(dx)===3||(dy===1&&Math.abs(dx)===2);P(ex+dx,ey+dy,pack(edge?150:196,edge?136:184,edge?124:172));}
+    for(const [dx,dy] of [[-1,0],[0,0],[1,0],[-1,1],[0,1],[1,1]])P(ex+dx,ey+dy,pack(eyeC[0]*(dy?1:.7),eyeC[1]*(dy?1:.7),eyeC[2]*(dy?1:.7)));
+    P(ex,ey,pack(12,8,8));P(ex,ey+1,pack(20,12,10));P(ex-1,ey,pack(eyeC[0]*.5,eyeC[1]*.5,eyeC[2]*.5));P(ex-1,ey+1,pack(232,228,220));
+    for(let i=-3;i<=3;i++)P(ex+i,ey-1,Math.abs(i)===3?pack(80,44,36):pack(28,15,13));P(ex+s*4,ey,pack(84,48,40));P(ex-s*4,ey+1,pack(120,70,60));
+    for(let i=-2;i<=2;i++)mixP(ex+i,ey-2,[54,28,22],.4);for(let i=-2;i<=3;i++)mixP(ex+i*(s),ey-3,[70,38,30],.22);
+    for(let i=-2;i<=2;i++)mixP(ex+i,ey+2,[96,54,44],.35);for(let i=-1;i<=2;i++)mixP(ex+i*s,ey+3,[96,54,44],.18);
+    // heavy brows, lowest at the nose end so the face reads as a frown
+    for(let i=0;i<8;i++){const bx=ex-s*3+s*i,by=ey-5+(i<2?1:0)+(i>6?1:0);
+      P(bx,by,tone(HRn,.18+(i%2?.14:0)+(s<0?.08:0),bx,by));P(bx,by+1,tone(HRn,.06,bx,by+1));if(i>1&&i<6)P(bx,by-1,tone(HRn,.32,bx,by-1));}}
+  for(const [x,y,a] of [[31,ey-4,.5],[31,ey-3,.4],[33,ey-4,.35],[32,ey-6,.15]])mixP(x,y,[70,34,28],a);
+  // nose: bridge highlight, shaded flank, nostrils
+  const ny=Math.round(cy+.43*RY);
+  for(let y=ey;y<ny-1;y++){mixP(31,y,[255,220,190],.08);mixP(34,y,[60,30,24],.1);}
+mixP(29,ny,[36,16,14],.65);mixP(34,ny,[36,16,14],.65);mixP(30,ny,[60,28,24],.35);mixP(33,ny,[60,28,24],.35);mixP(31,ny+1,[80,40,32],.3);mixP(32,ny+1,[80,40,32],.3);
+  // mouth: a hard straight line, corners turned down
+  const my=Math.round(cy+.615*RY);
+  for(let x=27;x<=37;x++)P(x,my,x===27||x===37?pack(74,36,30):pack(50,22,20));P(26,my+1,pack(92,50,42));P(38,my+1,pack(92,50,42));
+  for(let x=28;x<=36;x++){mixP(x,my-1,un(LIPS[1]),.5);mixP(x,my+1,un(LIPS[2]),.45);}for(let x=29;x<=35;x++)mixP(x,my+2,un(LIPS[3]),.25);
+  mixP(32,my+4,[60,30,26],.35);mixP(31,my+4,[60,30,26],.2);mixP(32,my-2,[90,48,40],.3);
   // hair
-  const strand=(x,y,base)=>rp(HR,base+((x*3+(y>>2))%4===0?.25:(x%3===0?-.12:0)),x,y);
-  const top=(x,y)=>{const nx=(x+.5-cx)/(rx+1.6),ny=(y+.5-(cy-1))/(ry+1.4);return nx*nx+ny*ny<=1&&y<11+Math.floor(hash2(x,7)*2.5);};
-  if(look.style===0||look.style===1){for(let y=3;y<16;y++)for(let x=8;x<32;x++){if(top(x,y)||(y<16&&(x<11||x>28)&&y>8&&((x+.5-cx)/(rx+1.6))**2+((y+.5-cy)/(ry+1.4))**2<=1))P(x,y,strand(x,y,.55-(x-8)/24*.4));}}
-  if(look.style===1){for(let y=10;y<36;y++)for(let x=6;x<34;x++){const side=x<11||x>28;if(!side)continue;const wv=Math.round(Math.sin(y*.6)*.6);if((x<11&&x>=7-Math.floor((y-10)/9)+wv)||(x>28&&x<=32+Math.floor((y-10)/9)+wv))P(x,y,strand(x,y,x<20?.6:.3));}}
-  if(look.style===2){for(let y=8;y<17;y++)for(let x=8;x<32;x++){const nx=(x+.5-cx)/(rx+1.6),ny=(y+.5-(cy-1))/(ry+1.4);if(nx*nx+ny*ny>1)continue;if(y>11||Math.abs(nx)>.62)P(x,y,strand(x,y,.5));}
-    for(let x=14;x<26;x++)P(x,8,rp(SK,.7,x,8));}
-  if(look.style===3){for(let y=4;y<14;y++)for(let x=9;x<31;x++)if(top(x,y)&&hash2(x*3,y*5)<.38)P(x,y,HR[1]);}
+  const strand=(x,y,base)=>{const st=((x*5+(y>>1)*3)%7===0?.22:((x+y)%5===0?-.16:0));return tone(HRn,clamp(base+st,0,1),x,y);};
+  const skull=(x,y,pad)=>{const u=(x+.5-cx)/(RX+pad),v=(y+.5-(cy-1.5))/(RY+pad*.8);return u*u+v*v<=1;};
+  const hairLit=(x,y)=>clamp(.66-(x-cx)/(RX*2.1)-(y-4)/44,0,1);
+  const hl=(u,x)=>cy-RY*.6+Math.abs(u)*3.6+(hash2(x,3)*1.6|0);
+  const st=look.style;
+  if(st===1){for(let y=10;y<Hp;y++)for(let x=2;x<62;x++){const dx=x+.5-cx;const out=RX+2.6+(y-10)*.08;if(Math.abs(dx)>out+Math.sin(y*.5+x)*.6||Math.abs(dx)<RX-3)continue;if(inFace(x,y)&&y>cy-10)continue;
+      if(y>sy+4)continue;P(x,y,strand(x,y,hairLit(x,y)*.85));}}
+  if(st===0||st===1){for(let y=0;y<cy;y++)for(let x=8;x<57;x++){if(!skull(x,y,2.4))continue;const u=(x+.5-cx)/RX,line=hl(u,x);if(y>line&&Math.abs(u)<.9)continue;if(y>line+5)continue;
+      P(x,y,strand(x,y,hairLit(x,y)));}
+    for(const s of [-1,1])for(let y=cy-10;y<cy-1;y++){const x=Math.round(cx+s*(RX-.6));P(x,y,strand(x,y,hairLit(x,y)*.7));P(x+s,y,strand(x+s,y,hairLit(x,y)*.6));}}
+  if(st===2){for(let y=0;y<cy;y++)for(let x=8;x<57;x++){if(!skull(x,y,2.2))continue;const u=(x+.5-cx)/RX,v=(y+.5-(cy-1.5))/RY;if(y>hl(u,x)+2&&Math.abs(u)<.9)continue;
+      if(v<-.74&&Math.abs(u)<.6){P(x,y,tone(SKn,clamp(.74-(x-cx)/30-(y-4)/30,0,1),x,y));continue;}P(x,y,strand(x,y,hairLit(x,y)));}}
+  if(st===3){for(let y=0;y<cy;y++)for(let x=8;x<57;x++){if(!skull(x,y,1.2))continue;const u=(x+.5-cx)/RX;if(y>hl(u,x)&&Math.abs(u)<.9)continue;
+      P(x,y,tone(SKn,clamp(.7-(x-cx)/28-(y-4)/36,0,1),x,y));if(hash2(x*3,y*5)<.45)mixP(x,y,HRn[2],.45);}}
   // beard
-  const b=look.beard;
-  if(b===1){for(let y=21;y<30;y++)for(let x=10;x<30;x++)if(inHead(x,y)&&(y>22||Math.abs(x+.5-cx)>6)&&hash2(x*7,y*3)<.4&&!(y>=24&&y<=27&&x>=16&&x<=23))P(x,y,HR[1]);}
-  if(b>=2){for(let x=16;x<24;x++){P(x,24,HR[2]);P(x,23,HR[x%2?1:2]);}P(15,25,HR[1]);P(24,25,HR[1]);if(b===2){P(15,26,HR[1]);P(24,26,HR[1]);}}
-  if(b>=3){const bot=b===4?38:31;for(let y=20;y<bot;y++)for(let x=8;x<32;x++){const inF=inHead(x,y)||(y>=29&&Math.abs(x+.5-cx)<Math.max(1,(b===4?7:5)-(y-29)*(b===4?.7:1.2)));
-      if(!inF||y<21&&Math.abs(x+.5-cx)<8.2)continue;if(y>=24&&y<=26&&x>=17&&x<=22)continue;if(y<24&&Math.abs(x+.5-cx)<6)continue;P(x,y,strand(x,y,.5-(x-8)/24*.3));}}
-  // dark pixel outline around the bust
-  const bg=(x,y)=>{const c=B[y*Wp+x],r=c&255,g=(c>>8)&255;return r<40&&g<34&&((c>>16)&255)<30&&Math.abs(r-(26+y*.4))<2;};
-  const O=B.slice();for(let y=1;y<Hp-1;y++)for(let x=1;x<Wp-1;x++)if(bg(x,y)&&(!bg(x-1,y)||!bg(x+1,y)||!bg(x,y-1)||!bg(x,y+1)))O[y*Wp+x]=pack(10,6,6);
-  cv.width=Wp;cv.height=Hp;const id=cv.getContext('2d').createImageData(Wp,Hp);new Uint32Array(id.data.buffer).set(O);cv.getContext('2d').putImageData(id,0,0);}
+  const b=look.beard;const jawZone=(x,y)=>{const u=Math.abs((x+.5-cx)/RX),v=(y+.5-cy)/RY;const top=u>.72?.02+(1-u)*.3:.1+(.72-u)/.72*.4+hash2(x,11)*.05;return inFace(x,y)&&v>top;};
+  const mouthHole=(x,y)=>y>=my-1&&y<=my+1&&x>=28&&x<=36;
+  if(b===1){for(let y=0;y<Hp;y++)for(let x=0;x<Wp;x++)if(jawZone(x,y)&&!mouthHole(x,y)&&hash2(x*7,y*3)<.55)mixP(x,y,HRn[1],.45);for(let x=27;x<=37;x++)if(hash2(x,9)<.6)mixP(x,my-2,HRn[1],.4);}
+  if(b>=2){for(let x=25;x<=39;x++){const d=Math.abs(x+.5-cx),yy=my-2+(d>4.5?1:0)+(d>6?1:0);P(x,yy,strand(x,yy,.45-(x-25)/40));P(x,yy-1,strand(x,yy-1,.58-(x-25)/40));if(d>5)P(x,yy+1,strand(x,yy+1,.3));}}
+  if(b>=3){const bot=b===4?Hp:Math.round(cy+RY+2);for(let y=0;y<bot;y++)for(let x=0;x<Wp;x++){const dx=x+.5-cx;let ok=jawZone(x,y);
+      if(!ok&&y>=cy+RY*.7){const y0=cy+RY*.7;const w=b===4?Math.max(2,12.5-(y-y0)*.45):Math.max(1,9.5-(y-y0)*1.3);ok=Math.abs(dx)<w;}
+      if(!ok||mouthHole(x,y))continue;P(x,y,strand(x,y,clamp(.58-dx/40-(y-cy)/60,0,1)));}
+    for(let x=29;x<=35;x++)P(x,my+1,pack(56,28,24));}
+  cv.width=Wp;cv.height=Hp;const id=cv.getContext('2d').createImageData(Wp,Hp);new Uint32Array(id.data.buffer).set(B);cv.getContext('2d').putImageData(id,0,0);}
 function renderMaker(){fitSoon();
   const box=$('mkOpts');box.replaceChildren();
   for(const [key,lab] of LOOKKEYS){const row=document.createElement('div');row.className='mkrow';
@@ -2916,6 +2980,8 @@ window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.ho
 })();
 </script>
 
+</body>
+</html>
 </body>
 </html>
 </body>
