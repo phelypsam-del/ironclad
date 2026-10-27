@@ -426,7 +426,7 @@ body{font-weight:500}
 .mi{display:inline-block;width:1.25em;height:1.25em;flex:none;background:center/contain no-repeat;image-rendering:pixelated;filter:drop-shadow(2px 2px 0 #000)}
 .mlist{border:0 solid;border-image:var(--tx-board) 8 fill / 24px round;padding:16px 30px 18px 10px!important;gap:3px!important;margin-top:.8cqw!important;image-rendering:pixelated;align-self:flex-start}
 .tbrand{display:flex;align-items:center;gap:1.2cqw}
-.crestbig{width:8.5cqw;min-width:60px;aspect-ratio:52/58;background:var(--tx-crestbig) center/contain no-repeat;image-rendering:pixelated;filter:drop-shadow(4px 4px 0 #000);flex:none}
+.crestbig{width:11.5cqw;min-width:84px;aspect-ratio:90/100;background:var(--tx-crestbig) center/contain no-repeat;image-rendering:pixelated;filter:drop-shadow(4px 4px 0 #000);flex:none}
 .tpanel{gap:.9cqw!important;max-width:62cqw!important}
 .tag2{font-size:max(13px,1.5cqw)!important;font-weight:600}
 .sum{font-size:max(13px,1.4cqw)!important;font-weight:600}
@@ -2899,70 +2899,91 @@ function genUI(){
   const iBook=icon(P=>{for(let y=1;y<12;y++)for(let x=2;x<11;x++)P(x,y,x===2?C3(60,30,16):C3(120,50,30));for(let y=2;y<11;y++)P(11,y,PAR[4]);for(let x=4;x<10;x++){P(x,3,GD[1]);P(x,9,GD[1]);}P(6,5,GD[1]);P(6,6,GD[1]);P(7,6,GD[1]);P(5,6,GD[1]);P(6,7,GD[1]);});
   const iBell=icon(P=>{for(let y=2;y<10;y++){const w=Math.floor((y-1)*.55)+1;for(let x=6-w;x<=6+w;x++)P(x,y,x<6?GD[1]:GD[0]);}for(let x=1;x<12;x++)P(x,10,GD[0]);P(6,1,INK);P(6,11,INK);P(5,11,INK);});
   const iFlag=icon(P=>{for(let y=1;y<12;y++)P(2,y,C3(90,56,30));for(let y=1;y<7;y++)for(let x=3;x<11;x++){if(x>8&&Math.abs(y-3.5)<(x-8))continue;P(x,y,y===1?C3(220,70,60):C3(176,30,28));}P(5,3,GD[1]);P(5,4,GD[1]);P(4,3,GD[1]);P(6,3,GD[1]);});
+  // Detailed heraldic crest: crossed longswords behind a quartered heater shield, gilt rim and rivets, jewelled crown.
+  // Drawn into a w×h pixel buffer through P(x,y,color); C3(r,g,b) makes a color. Lit from the upper left.
   const crestFn=(P,w,h,C3,INK)=>{
-  const cl=(v,a,b)=>v<a?a:v>b?b:v,hs=(x,y)=>{let n=x*374761393+y*668265263;n=(n^(n>>>13))*1274126177;return ((n^(n>>>16))>>>0)/4294967295;};
-  const bay=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
-  const ramp=(cols,s,x,y)=>{const v=cl(s,0,.999)*(cols.length-1)+(bay[y&3][x&3]/16-.47)*.55;return cols[cl(Math.round(v),0,cols.length-1)];};
-  const STL=[C3(46,50,62),C3(92,100,116),C3(150,160,176),C3(204,212,224),C3(244,248,252)];
-  const GLD=[C3(92,58,12),C3(150,104,24),C3(204,152,44),C3(240,198,80),C3(255,236,150)];
-  const RD=[C3(70,10,12),C3(112,20,20),C3(156,32,28),C3(196,56,44),C3(226,96,74)];
-  const BL=[C3(16,24,62),C3(30,48,108),C3(48,76,150),C3(76,110,190),C3(120,154,220)];
-  const LTH=[C3(40,22,12),C3(78,44,22),C3(118,72,36)];
-  const cx=w/2;
-  // ---- swords (point up), behind shield
-  const sword=(dir)=>{ // dir=1: hilt bottom-left, point top-right
-    const hx=dir>0?5:w-6,hy=h-5,len=62,ux=dir*.7071,uy=-.7071,nx=-uy,ny=ux*dir*dir;
-    // blade
-    for(let t=4;t<len;t++){const tip=t>len-4?(len-t)/4:1;for(let o=-1.6*tip;o<=1.6*tip;o+=.5){const x=Math.round(hx+ux*t+(-uy)*o),y=Math.round(hy+uy*t+ux*o);
-      const s=o<-.6?.95:o<.2?.55:.3;P(x,y,ramp(STL,s+(t%11===0?.1:0),x,y));}}
-    for(let t=4;t<len;t++){for(const o of [-2.2,2.2]){const tip=t>len-4?(len-t)/4:1;const x=Math.round(hx+ux*t+(-uy)*o*tip),y=Math.round(hy+uy*t+ux*o*tip);P(x,y,INK);}}
-    // crossguard
-    for(let o=-6;o<=6;o++)for(const d of [3,4]){const x=Math.round(hx+ux*d+(-uy)*o),y=Math.round(hy+uy*d+ux*o);P(x,y,d===3?GLD[1]:GLD[Math.abs(o)>4?4:3]);}
-    // grip
-    for(let t=-3;t<3;t++){const x=Math.round(hx+ux*t),y=Math.round(hy+uy*t);P(x,y,LTH[(t&1)+1]);P(x+1,y,LTH[0]);}
-    // pommel
-    const px=Math.round(hx-ux*4),py=Math.round(hy-uy*4);
-    for(let y=-2;y<=2;y++)for(let x=-2;x<=2;x++){const d=Math.hypot(x,y);if(d>2.3)continue;P(px+x,py+y,d>1.6?INK:(x+y<0?GLD[4]:GLD[2]));}
-  };
-  sword(1);sword(-1);
-  // ---- heater shield
-  const top=10,bot=h-5,L=9,R=w-10,mid=(L+R)/2,half=(R-L)/2,bend=top+(bot-top)*.42;
-  const hwAt=y=>y<bend?half:half*Math.sqrt(Math.max(0,1-Math.pow((y-bend)/(bot-bend),1.6)));
-  const inS=(x,y)=>y>=top&&y<=bot&&Math.abs(x+.5-mid)<=hwAt(y)+.01&&!(y===top&&false);
-  for(let y=top;y<=bot;y++)for(let x=L-1;x<=R+1;x++){
-    if(!inS(x,y))continue;const dx=Math.abs(x+.5-mid),hw=hwAt(y),ed=hw-dx,ey=y-top;
-    const shade=.62+.38*Math.cos((x+.5-mid)/half*1.25+.45)-(y-top)/(bot-top)*.18;
-    let c;
-    if(ed<1.1||ey<1)c=INK;
-    else if(ed<3.2||ey<3){const rimS=(x<mid?.85:.45)+(ed<2?.15:-.1)+(ey<2?.2:0);c=ramp(GLD,rimS,x,y);
-      const rv=(ey<3)?(x-L)%8===4&&ey===2:(ed>=1.6&&ed<2.8&&(y-top)%8===4);if(rv){c=GLD[4];}}
-    else if(ed<4.2||ey<4)c=GLD[0];
-    else{
-      const yc=top+(bot-top)*.45,cxm=mid;
-      const fx=x+.5-cxm,fy=y-yc,cr=Math.abs(fx)<2.6||Math.abs(fy)<2.4;const crE=Math.abs(fx)<3.4||Math.abs(fy)<3.2;
-      if(cr){const hi=(Math.abs(fx)<2.6&&fx<-.6)||(Math.abs(fy)<2.4&&fy<-.6);c=hi?GLD[3]:GLD[2];if(Math.abs(fx)<.6&&Math.abs(fy)<.6)c=RD[3];}
-      else if(crE)c=INK;
-      else{const q=(fx<0)===(fy<0);c=ramp(q?RD:BL,shade+(hs(x,y)-.5)*.12,x,y);}
+    const cl=(v,a,b)=>v<a?a:v>b?b:v;
+    const hs=(x,y)=>{let n=(x*374761393+y*668265263)|0;n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967295;};
+    const bay=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+    const ramp=(R,s,x,y,dith)=>{const v=cl(s,0,.9999)*(R.length-1)+(dith??.5)*(bay[y&3][x&3]/16-.47);return R[cl(Math.round(v),0,R.length-1)];};
+    const mk=a=>a.map(c=>C3(c[0],c[1],c[2]));
+    const lerpC=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+    const smooth=(stops,n)=>{const o=[];for(let i=0;i<n;i++){const t=i/(n-1)*(stops.length-1),k=Math.min(stops.length-2,Math.floor(t));o.push(lerpC(stops[k],stops[k+1],t-k));}return mk(o);};
+    const STEEL=smooth([[28,32,42],[70,78,94],[132,142,160],[196,204,218],[246,250,255]],11);
+    const GOLD=smooth([[58,34,8],[120,78,18],[186,132,38],[232,186,74],[255,240,160]],11);
+    const RED=smooth([[52,8,10],[104,18,20],[156,32,28],[196,58,44],[230,104,80]],10);
+    const BLUE=smooth([[12,18,46],[26,44,98],[44,72,148],[72,108,190],[124,160,226]],10);
+    const SILV=smooth([[70,74,86],[140,146,160],[214,220,232],[250,252,255]],8);
+    const LEA=smooth([[30,16,8],[72,40,20],[118,74,40],[154,106,62]],6);
+    const VEL=smooth([[46,6,10],[96,14,22],[146,28,36]],5);
+    const OUT=INK,L=[-.6,-.62,.5],Ln=Math.hypot(...L),LV=L.map(v=>v/Ln);
+    const shade=(nx,ny,nz)=>Math.max(0,nx*LV[0]+ny*LV[1]+nz*LV[2]);
+    const spec=(nx,ny,nz,p)=>{const hx=LV[0],hy=LV[1],hz=LV[2]+1,hl=Math.hypot(hx,hy,hz);return Math.pow(Math.max(0,(nx*hx+ny*hy+nz*hz)/hl),p);};
+    const buf=new Array(w*h).fill(null);const put=(x,y,c)=>{x|=0;y|=0;if(x>=0&&y>=0&&x<w&&y<h)buf[y*w+x]=c;};
+    const cx=w/2;
+    // ---------- crossed longswords (behind the shield) ----------
+    const sword=(dir)=>{
+      const hx=dir>0?9:w-10,hy=h-9,ang=dir>0?-Math.PI/4:-3*Math.PI/4,ux=Math.cos(ang),uy=Math.sin(ang),nx=-uy,ny=ux,len=Math.hypot(w,h)*.74;
+      const at=(t,o)=>[hx+ux*t+nx*o,hy+uy*t+ny*o];
+      for(let t=9;t<len;t+=.35){const taper=t>len-10?(len-t)/10:1,hw=2.6*taper+(t<14?.4:0);
+        for(let o=-hw;o<=hw;o+=.35){const [x,y]=at(t,o),k=o/Math.max(hw,.01);
+          let s=.55+(-k)*.32*(dir>0?1:-1);if(Math.abs(k)<.28&&t>12&&t<len-14)s-=.22;if(Math.abs(k)>.82)s+=.12;
+          s+=spec(-k*.7,-.4,.6,10)*.5;if(((t*.7)|0)%13===0)s+=.06;put(x,y,ramp(STEEL,s,x|0,y|0));}
+        const [ex1,ey1]=at(t,hw+.8),[ex2,ey2]=at(t,-hw-.8);put(ex1,ey1,OUT);put(ex2,ey2,OUT);}
+      { const [tx,ty]=at(len+.5,0);put(tx,ty,OUT);}
+      for(let o=-11;o<=11;o+=.35)for(let t=6.6;t<=9.2;t+=.35){const [x,y]=at(t,o);const s=.35+(t<7.6?.35:0)+spec(0,-1,.4,6)*.4-(Math.abs(o)>9?.1:0);put(x,y,ramp(GOLD,s,x|0,y|0));}
+      for(const o of [-11.8,11.8]){const [x,y]=at(7.9,o);for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)if(i*i+j*j<=1)put(x+i,y+j,GOLD[8]);put(x,y,GOLD[10]);}
+      for(let t=-6;t<6.6;t+=.35)for(let o=-1.7;o<=1.7;o+=.35){const [x,y]=at(t,o);const band=((t*1.3+o*.9)%2+2)%2<.9;put(x,y,ramp(LEA,(band?.75:.35)-o*.12,x|0,y|0));}
+      { const [px,py]=at(-9.4,0);for(let j=-4;j<=4;j++)for(let i=-4;i<=4;i++){const d=Math.hypot(i,j);if(d>3.8)continue;const e=d>3.1;put(px+i,py+j,e?OUT:ramp(GOLD,.55-(i+j)*.07+spec(-i/4,-j/4,.6,8)*.5,(px+i)|0,(py+j)|0));}
+        for(const [i,j,c] of [[0,0,RED[5]],[-1,-1,RED[8]],[1,0,RED[3]],[0,1,RED[3]]])put(px+i,py+j,c);}
+    };
+    sword(1);sword(-1);
+    // ---------- heater shield ----------
+    const top=17,bot=h-10,Lx=16,Rx=w-17,mid=(Lx+Rx)/2,half=(Rx-Lx)/2,bend=top+(bot-top)*.42;
+    const hwAt=y=>y<bend?half:half*Math.sqrt(Math.max(0,1-Math.pow((y-bend)/(bot-bend),1.55)));
+    const yc=top+(bot-top)*.43;
+    for(let y=top;y<=bot;y++)for(let x=Lx-2;x<=Rx+2;x++){
+      const dx=x+.5-mid,hw=hwAt(y);if(Math.abs(dx)>hw)continue;const ed=hw-Math.abs(dx),ey=y-top;
+      const u=dx/half,v=(y-yc)/(bot-top),nx=u*.55,ny=v*.35-.05,nz=Math.sqrt(Math.max(.05,1-nx*nx-ny*ny));
+      const lit=shade(nx,ny,nz),sp=spec(nx,ny,nz,24);
+      let c;
+      if(ed<1.2||ey<1){c=OUT;}
+      else if(ed<4.6||ey<4.6){const rimN=ed<2.9||ey<2.9;c=ramp(GOLD,.18+lit*.85+(rimN?.12:-.08)+sp*.6,x,y);
+        const onRiv=(ey<4.6&&ey>1.8)?(((x-Lx)%9)===4&&ed>4.6):((ed>1.8&&ed<4.4)&&((y-top)%9===4));
+        if(onRiv){c=GOLD[10];put(x+1,y+1,GOLD[1]);}}
+      else if(ed<5.6||ey<5.6)c=GOLD[1];
+      else{
+        const fx=x+.5-mid,fy=y-yc,crossV=Math.abs(fx)<3.4,crossH=Math.abs(fy)<3.2,crossE=Math.abs(fx)<4.4||Math.abs(fy)<4.2;
+        if(crossV||crossH){const bev=(crossV&&Math.abs(fx)>2.2)||(crossH&&Math.abs(fy)>2);const hiSide=(crossV&&fx<-2.2)||(crossH&&fy<-2);
+          c=ramp(GOLD,.3+lit*.62+(bev?(hiSide?.22:-.2):0)+sp*.5,x,y);if(Math.abs(fx)<1.2&&Math.abs(fy)<1.2)c=RED[7];}
+        else if(crossE)c=OUT;
+        else{const q=(fx<0)===(fy<0);const R=q?RED:BLUE;
+          let s=.12+lit*.78+sp*.35+(hs(x>>1,y)-.5)*.06;
+          if(((x*3+y*7)%23===0)&&hs(x,y)<.5)s+=.12;
+          if(hs(x*5,y*3)<.012)s-=.25;
+          c=ramp(R,s,x,y);}
+      }
+      put(x,y,c);
     }
-    P(x,y,c);
-  }
-  // quarter charges
-  const fleur=["...X...","..XXX..","X.XXX.X","XX.X.XX",".XXXXX.","XXXXXXX","..X.X..",".XX.XX."];
-  const star=["...X...","...X...","XXXXXXX",".XXXXX.","..XXX..",".XX.XX.","XX...XX"];
-  const stamp=(bm,ox,oy,cols)=>{bm.forEach((r,j)=>[...r].forEach((ch,i)=>{if(ch!=='X')return;const x=ox+i,y=oy+j;
-    for(const [a,b] of [[1,0],[0,1],[-1,0],[0,-1]]){const rr=bm[j+b],ok=rr&&rr[i+a]==='X';if(!ok)P(x+a,y+b,INK);}}));
-    bm.forEach((r,j)=>[...r].forEach((ch,i)=>{if(ch==='X')P(ox+i,oy+j,cols[(i+j<6)?1:0]);}));};
-  const yc=Math.round(top+(bot-top)*.45),m=Math.round(mid);
-  stamp(fleur,m-12,yc-12,[GLD[2],GLD[4]]);stamp(star,m+5,yc-11,[STL[3],STL[4]]);
-  stamp(star,m-12,yc+6,[STL[3],STL[4]]);stamp(fleur,m+5,yc+5,[GLD[2],GLD[4]]);
-  // crown
-  const cy=2,cw=17,c0=Math.round(cx-cw/2);
-  for(let x=0;x<cw;x++){for(let y=5;y<9;y++)P(c0+x,cy+y,y===8||x===0||x===cw-1?INK:ramp(GLD,(x<cw/2?.85:.55)-(y-5)*.08,c0+x,cy+y));}
-  for(const [px,ht] of [[1,4],[5,3],[8,5],[11,3],[15,4]]){for(let y=5-ht;y<5;y++){P(c0+px,cy+y,GLD[3]);P(c0+px-1,cy+y,INK);P(c0+px+1,cy+y,INK);}P(c0+px,cy+4-ht,INK);P(c0+px,cy+5-ht,GLD[4]);}
-  for(const [px,col] of [[4,RD[3]],[8,BL[3]],[12,RD[3]]]){P(c0+px,cy+6,col);P(c0+px,cy+7,INK);}
-  for(let x=1;x<cw-1;x++)if(x%2)P(c0+x,cy+5,GLD[4]);
-};
-  const crestBig=tex(52,58,(P,w,h)=>crestFn(P,w,h,C3,INK));
+    // ---------- charges: fleur-de-lis on red, mullets on blue ----------
+    const FLEUR=["....X....","...XXX...","..XXXXX..","..XXXXX..","X..XXX..X","XX.XXX.XX","XXXXXXXXX",".XXXXXXX.","....X....","..XXXXX..",".XX.X.XX.","XX..X..XX"];
+    const STAR=[".....X.....","....XXX....","....XXX....","XXXXXXXXXXX",".XXXXXXXXX.","..XXXXXXX..","..XXXXXXX..",".XXX...XXX.","XX.......XX"];
+    const stamp=(bm,ox,oy,R)=>{const H=bm.length,W=bm[0].length;const on=(i,j)=>j>=0&&j<H&&i>=0&&i<W&&bm[j][i]==='X';
+      for(let j=-1;j<=H;j++)for(let i=-1;i<=W;i++){if(on(i,j))continue;if(on(i-1,j)||on(i+1,j)||on(i,j-1)||on(i,j+1))put(ox+i,oy+j,OUT);}
+      for(let j=0;j<H;j++)for(let i=0;i<W;i++)if(on(i,j)){const hi=!on(i-1,j)||!on(i,j-1),lo=!on(i+1,j)||!on(i,j+1);put(ox+i,oy+j,ramp(R,.55+(hi?.35:0)-(lo?.3:0),ox+i,oy+j,.3));}};
+    const m=Math.round(mid),yy=Math.round(yc);
+    stamp(FLEUR,m-17,yy-19,GOLD);stamp(STAR,m+5,yy-17,SILV);stamp(STAR,m-17,yy+7,SILV);stamp(FLEUR,m+6,yy+7,GOLD);
+    // ---------- crown ----------
+    const cw=29,c0=Math.round(cx-cw/2),cb=15;
+    for(let y=cb-11;y<cb-3;y++){const hw=(cw/2-3)*Math.sqrt(Math.max(0,1-((cb-3-y)/9)**2));for(let x=Math.round(cx-hw);x<=Math.round(cx+hw);x++)put(x,y,ramp(VEL,.35+(cx-x)/cw*.6,x,y));}
+    for(let x=0;x<cw;x++)for(let y=cb-4;y<=cb;y++){const X=c0+x,ed=x===0||x===cw-1||y===cb;const s=.3+.55*(1-x/cw)+(y===cb-4?.25:0)+(y===cb-1?-.12:0);put(X,y,ed?OUT:ramp(GOLD,s,X,y));}
+    for(const [px,ht] of [[2,6],[8,5],[14,8],[20,5],[26,6]]){const X=c0+px;for(let y=cb-4-ht;y<cb-4;y++){const w2=Math.max(0,Math.round((y-(cb-4-ht))*.45));for(let i=-w2;i<=w2;i++)put(X+i,y,ramp(GOLD,.45+(i<0?.3:-.05),X+i,y));put(X-w2-1,y,OUT);put(X+w2+1,y,OUT);}
+      put(X,cb-4-ht,SILV[7]);put(X-1,cb-4-ht,OUT);put(X+1,cb-4-ht,OUT);put(X,cb-5-ht,OUT);}
+    for(const [px,R] of [[5,RED],[14,BLUE],[23,RED]]){const X=c0+px;put(X,cb-2,R[7]);put(X+1,cb-2,R[4]);put(X,cb-3,R[9]);put(X+1,cb-3,R[6]);put(X-1,cb-2,OUT);put(X+2,cb-2,OUT);}
+    for(let x=1;x<cw-1;x++)if(x%3===1)put(c0+x,cb-1,GOLD[9]);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const c=buf[y*w+x];if(c!=null)P(x,y,c);}
+  };
+  const crestBig=tex(90,100,(P,w,h)=>crestFn(P,w,h,C3,INK));
   const board=tex(32,32,(P,w,h)=>{for(let y=0;y<h;y++)for(let x=0;x<w;x++){const d=Math.min(x,y,w-1-x,h-1-y);let c;
       if(d===0)c=((x===0||x===w-1)&&(y===0||y===h-1))?0:C3(10,6,4);else{const seam=y%6===5,g=vnoise(x*.5+Math.floor(y/6)*13,y*3,5,21)*.8+hash2(x,y)*.2;c=seam?C3(26,16,8):A8(WD[clamp(Math.floor(g*2.3+dz(x,y)*.7),0,3)],236);}
       if(d>=1&&d<=2&&((x<8||x>w-9)&&(y<8||y>h-9)))c=d===1?C3(96,96,108):C3(60,60,70);P(x,y,c);}
@@ -2991,8 +3012,14 @@ function crestURL(ci){if(CRESTS[ci])return CRESTS[ci];const C=CITIES[ci],w=15,h=
   x.putImageData(id,0,0);return CRESTS[ci]=`url('${cv.toDataURL()}')`;}
 // ---------- version and update notes ----------
 // Bump GAME_VERSION and add an entry at the top of CHANGELOG for every update: players see the popup once per version.
-const GAME_VERSION='1.8.0';
+const GAME_VERSION='1.8.1';
 const CHANGELOG=[
+  {v:'1.8.1',date:'27 Oct 2026',title:'A new face',
+   slides:[
+    {img:'data:image/png;base64,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',title:'New game icon',text:'A blood-spattered gothic knight now marks Ironclad Duel on your desktop, home screen and browser tab.'},
+    {title:'A finer crest',text:'The shield and swords on the title screen have been redrawn with lit steel, gilt rivets, a jewelled crown and worn, painted heraldry.'}
+   ],
+   items:['New blood-spattered knight icon.','Redrawn, more detailed title crest.']},
   {v:'1.8.0',date:'27 Oct 2026',title:'Install the game',
    slides:[
     {title:'Ironclad Duel is now an app',text:'Press "Install the game" on the title screen (or the install icon in your browser\'s address bar) to put Ironclad Duel on your desktop, Start menu or home screen with its own icon and window.'},
