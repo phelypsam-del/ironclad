@@ -633,6 +633,13 @@ body{font-weight:500}
 
 .acctfloat{position:absolute;left:50%;bottom:2.2cqw;transform:translateX(-50%);z-index:4;font-size:max(16px,1.9cqw)!important;padding:.45em 1.6em .55em!important;white-space:nowrap}
 .acctfloat[hidden]{display:none!important}
+
+.newver{position:absolute;left:50%;top:1.4cqw;transform:translateX(-50%);z-index:40;display:flex;align-items:center;gap:.8em;padding:.6em .9em .6em 1.2em;background:#e2d9ba;color:#2a1608;border:max(3px,.3cqw) solid #2e2a1e;box-shadow:inset 0 0 0 2px #f0e9d0,0 .5cqw 0 rgba(0,0,0,.45),0 0 0 100vmax rgba(0,0,0,0);font-family:var(--f-ui);font-weight:600;font-size:max(13px,1.4cqw);max-width:92%;animation:nvdrop .35s ease-out}
+.newver[hidden]{display:none!important}
+.newver .go{font-size:max(15px,1.6cqw)!important;padding:.3em 1em .45em!important;white-space:nowrap}
+.newver .pbtn{font-size:max(13px,1.3cqw)!important;padding:.25em .8em .35em!important}
+@keyframes nvdrop{from{transform:translate(-50%,-140%)}to{transform:translate(-50%,0)}}
+@media (prefers-reduced-motion:reduce){.newver{animation:none}}
 </style>
 
 <div class="stage inmenu" id="stage">
@@ -645,6 +652,7 @@ body{font-weight:500}
   <div class="callout" id="callout"></div>
   <div class="log off" id="log" aria-live="polite"></div>
 
+  <div class="newver" id="newVer" hidden role="status"><span id="newVerTxt">A new version of Ironclad Duel is out.</span><button class="go" id="newVerGo" type="button">Refresh now</button><button class="pbtn" id="newVerLater" type="button">Later</button></div>
   <div class="overlay updpop" id="updPop" hidden>
     <div class="card updcard" role="dialog" aria-modal="true" aria-labelledby="updTitle">
       <p class="eyebrow" id="updEyebrow"></p>
@@ -2898,6 +2906,17 @@ function updSlide(i){const e=CHANGELOG[0],S=e.slides,n=S.length;i=(i+n)%n;G.updI
   $('updSTitle').textContent=sl.title||'';$('updSText').textContent=sl.text||'';
   const dots=$('updDots');dots.replaceChildren();S.forEach((_,k)=>{const d=document.createElement('button');d.type='button';d.className='upddot'+(k===i?' on':'');d.setAttribute('aria-label','Slide '+(k+1));d.onclick=()=>updSlide(k);dots.append(d);});
   $('updClose').textContent=i===n-1?'Close':'Close';$('updNext').textContent=i===n-1?'↺':'›';fitSoon();}
+// ---------- live update check: tell players to refresh when a newer version is published ----------
+const UPCHK={tag:null,timer:0,found:null,snoozed:0};
+function updCheckable(){return /^https?:$/.test(location.protocol)&&/(^|\.)github\.io$|^localhost$|^127\./.test(location.hostname);}
+async function updCheck(){if(!updCheckable()||UPCHK.found)return;
+  try{const url=location.origin+location.pathname;const h=await fetch(url,{method:'HEAD',cache:'no-store'});const tag=h.headers.get('etag')||h.headers.get('last-modified');
+    if(tag&&UPCHK.tag===null){UPCHK.tag=tag;return;}if(tag&&tag===UPCHK.tag)return;
+    const t=await fetch(url+'?vchk='+Date.now(),{cache:'no-store'}).then(r=>r.text());const m=t.match(/const GAME_VERSION='([^']+)'/);UPCHK.tag=tag;
+    if(m&&m[1]!==GAME_VERSION){UPCHK.found=m[1];showNewVer();}}catch(_){}}
+function showNewVer(){if(!UPCHK.found||Date.now()<UPCHK.snoozed)return;$('newVerTxt').textContent=`Version ${UPCHK.found} of Ironclad Duel is out. Refresh to get it — your progress is saved.`;$('newVer').hidden=false;}
+function refreshGame(){try{saveCamp();}catch(_){}const go=()=>{location.href=location.origin+location.pathname+'?v='+Date.now();};
+  if(typeof CLOUD!=='undefined'&&CLOUD.user){cloudPush(true).finally(go);setTimeout(go,2500);}else go();}
 function closeUpdates(){$('updPop').hidden=true;try{localStorage.setItem(VERKEY,GAME_VERSION);}catch(_){}const b=$('pMain').querySelector('button');if(b&&!$('pMain').hidden)b.focus({preventScroll:true});}
 function renderMap(){
   const T=mapTerrain(),B=flatMap(T);
@@ -3459,6 +3478,8 @@ function start(data){
   $('acctForgot').addEventListener('click',()=>acctDo('forgot'));$('acctOutBtn').addEventListener('click',()=>acctDo('out'));$('acctSyncNow').addEventListener('click',()=>cloudPush(true));
   $('acctPass').addEventListener('keydown',e=>{if(e.key==='Enter')acctDo('in');});
   acctRender();if(ACCT_OK)setTimeout(cloudInit,600);
+  $('newVerGo').addEventListener('click',refreshGame);$('newVerLater').addEventListener('click',()=>{$('newVer').hidden=true;UPCHK.snoozed=Date.now()+10*60*1000;setTimeout(showNewVer,10*60*1000+500);});
+  if(updCheckable()){updCheck();UPCHK.timer=setInterval(updCheck,120000);addEventListener('focus',updCheck);document.addEventListener('visibilitychange',()=>{if(!document.hidden)updCheck();});}
   $('verTxt').textContent=`v${GAME_VERSION}`;$('verTxt').addEventListener('click',()=>showUpdates(true));
   $('updClose').addEventListener('click',closeUpdates);$('updPrev').addEventListener('click',()=>updSlide((G.updI||0)-1));$('updNext').addEventListener('click',()=>updSlide((G.updI||0)+1));$('updPop').addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();closeUpdates();}else if(e.key==='ArrowRight'){e.stopPropagation();updSlide((G.updI||0)+1);}else if(e.key==='ArrowLeft'){e.stopPropagation();updSlide((G.updI||0)-1);}});
   setTimeout(()=>showUpdates(false),400);
