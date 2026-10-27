@@ -14,6 +14,7 @@ self.addEventListener('fetch',e=>{
     // the game itself: network first, fall back to the saved copy when offline
     e.respondWith(fetch(req,{cache:'no-store'}).then(r=>{if(r.ok){const cp=r.clone();caches.open(CACHE).then(c=>c.put('./index.html',cp));}return r;}).catch(()=>caches.match('./index.html').then(r=>r||caches.match('./'))));
     return;}
+  if(/\.mp4$/.test(url.pathname))return; // the trailer streams straight from the site
   if(url.origin===location.origin&&url.searchParams.has('vchk'))return; // the update checker must always ask the network
   // everything else (fonts, icons, libraries): cached copy first, refreshed in the background
   e.respondWith(caches.match(req).then(hit=>{const net=fetch(req).then(r=>{if(r&&(r.ok||r.type==='opaque')){const cp=r.clone();caches.open(CACHE).then(c=>c.put(req,cp));}return r;}).catch(()=>hit);return hit||net;}));
