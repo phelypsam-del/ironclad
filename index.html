@@ -1104,6 +1104,9 @@ const ROMAN=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII
 // opponents are rolled fresh for every campaign: random names and faces, same strength for each fight
 const FOE_FIRST=['Aldo','Bertram','Cuthred','Drogo','Eadwine','Faramond','Godric','Hereward','Ingram','Jocelin','Kenelm','Leofwin','Morcar','Nithard','Osbert','Piers','Rainald','Sigeric','Thurstan','Ulric','Waleran','Wystan','Aethelred','Baldric','Cenric','Durand','Everard','Fulk','Gamel','Hamon','Ivo','Lambert','Mauger','Norbert','Odo','Payn','Ranulf','Serlo','Tostig','Walter','Wulfstan','Anselm','Bardolph','Corbin','Edric','Geoffrey','Hugo','Ralph','Roger','Simon','Theobald','Warin','Gerbold','Hrothgar','Bayard','Grimbald','Ordgar','Swein','Tancred','Umfrey'];
 const FOE_BY=['the Red','Ironhand','of the Marsh','Blackwood','the Bold','Grimm','Crookback','the Elder','Halfhand','Stonearm','Ashby','the Younger','Wolfe','Ravensbane','the Silent','Oakheart','Scarface','the Lame','Hardacre','of the Fens','Coldwater','the Grey','Bloodaxe','Longshanks','the Tanner','Fairfax','Thornbeard','Mudfoot','the Hound','Dunmore'];
+const KINGS=['King Edward III of England','King John II of France','Emperor Charles IV','Grand Master Winrich von Kniprode','Emperor John VI Kantakouzenos'];
+const KING_LOOK=[{skin:1,hair:3,style:1,beard:4,eyes:1,tunic:5,herald:0},{skin:0,hair:1,style:0,beard:3,eyes:0,tunic:2,herald:1},{skin:1,hair:4,style:1,beard:3,eyes:3,tunic:3,herald:4},{skin:0,hair:5,style:0,beard:4,eyes:3,tunic:4,herald:3},{skin:2,hair:0,style:1,beard:4,eyes:0,tunic:5,herald:4}];
+const KING_PLATE=[45,75,100,120,150];
 const FOE_LORD=['the Miller of Nottingham','Provost of Paris','Castellan of Vienna','Grand Master of the Order','Captain of the Varangian Guard'];
 const FOE_NAT=[null,
   {first:['Guillaume','Jehan','Gautier','Thibaut','Renaud','Enguerrand','Raoul','Amaury','Bertrand','Olivier','Hugues','Gilles','Pierre','Robert','Étienne','Philippe','Arnaud','Baudouin','Gérard','Jacques'],
@@ -1117,14 +1120,15 @@ const FOE_NAT=[null,
 function foeRng(ci,lv){return rng(((CAMP.foeSeed||1)^Math.imul(ci+1,7919)^Math.imul(lv+3,104729))>>>0);}
 function foeName(C,lv,ci){const R=foeRng(ci??CITIES.indexOf(C),lv),pick=a=>a[Math.floor(R()*a.length)];
   const NAT=FOE_NAT[ci??CITIES.indexOf(C)],first=pick(NAT?NAT.first:FOE_FIRST),by=R()<.55?' '+pick(NAT?NAT.by:FOE_BY):'',title=pick(C.titles);
-  if(lv===14)return `${first}${by}, ${FOE_LORD[CITIES.indexOf(C)]||'Lord'}`;
+  if(lv===14)return KINGS[ci??CITIES.indexOf(C)]||`${first}${by}, ${FOE_LORD[CITIES.indexOf(C)]||'Lord'}`;
   if(lv%5===4)return `${title} ${first}${by}, holder of ${C.holds?C.holds[holdOf(lv)].name:C.name}`;
   return `${title} ${first}${by}`;}
 function enemyKit(ci,lv){const C=CITIES[ci],t=lv/14;let k=C.kit(t,lv);if(lv===14)k={...k,...C.boss};
   const R=foeRng(ci,lv+40),looks=[[{}],[{hs:'open'},{hs:'sallet'},{hs:'open',tint:RUSTY}],[{tint:RUSTY,hs:'open'},{tint:RUSTY,hs:'visor'},{tint:BLACKST,hs:'sallet'},{hs:'visor'}],[{style:'flute',hs:'sallet'},{style:'flute',hs:'visor'},{tint:POLISH,hs:'great'},{tint:BLACKST,hs:'visor'}],[{tint:POLISH,hs:'visor'},{tint:GILT,style:'gilt',hs:'visor'},{tint:POLISH,hs:'great'},{style:'flute',hs:'sallet'}]],
-    L=lv===14?[{hs:'open'},{tint:RUSTY,hs:'open'},{tint:BLACKST,hs:'great'},{tint:BLACKST,hs:'great'},{tint:GILT,style:'gilt',hs:'crown'}][ci]:looks[ci][Math.floor(R()*looks[ci].length)];
+    L=lv===14?{tint:GILT,style:'gilt',hs:'crown'}:looks[ci][Math.floor(R()*looks[ci].length)];
+  if(lv===14){const pv=KING_PLATE[ci];if(typeof k.plate!=='object'||!k.plate)k.plate=Math.max(k.plate||0,pv);else{const p={};for(const z of ZK)p[z]=Math.max(kv(k.plate,z),pv);k.plate=p;}k.mail=100;k.scale=1.22;}
   if(L.tint||L.style){k.tint={};k.style={};for(const z of ZK){k.tint[z]=L.tint;k.style[z]=L.style;}}k.hs=L.hs;
-  const lk=randomLook(((CAMP.foeSeed||1)^Math.imul(ci*131+lv*17+5,2654435761))>>>0);if(ci===0){k.cloth={};const TN=LOOKS.tunic[lk.tunic].r;for(const z of ZB)k.cloth[z]=TN;k.hood=R()<.35;}
+  const lk=lv===14?{...KING_LOOK[ci]}:randomLook(((CAMP.foeSeed||1)^Math.imul(ci*131+lv*17+5,2654435761))>>>0);if(ci===0&&lv!==14){k.cloth={};const TN=LOOKS.tunic[lk.tunic].r;for(const z of ZB)k.cloth[z]=TN;k.hood=R()<.35;}
   return {...k,look:lk,hp:Math.round(k.hp),name:foeName(C,lv,ci),ramp:C.ramp,trim:C.trim};}
 function reward(ci,lv){return Math.round([14,26,44,70,110][ci]*(1+lv*.08)*(lv===14?2:1));}
 const SAVEKEY='ironclad-campaign-v1';
@@ -1198,7 +1202,7 @@ function applyKit(f,k){
   for(const zk of ZK)f.zones[zk].cloth=(k.cloth&&k.cloth[zk])||null;
   if(k.look)f.look=resolveLook(k.look);
   f.wpn=WEAPONS[k.wpn||'longsword'];f.shield=k.shield&&k.shield!=='none'?SHIELDS[k.shield]:null;
-  f.maxHp=f.hp=f.ghost=k.hp||100;if(k.name)f.name=k.name;if(k.ramp){f.ramp=k.ramp;f.trim=k.trim;}f.prof=k.prof||null;
+  f.maxHp=f.hp=f.ghost=k.hp||100;f.scale=k.scale||1;if(k.name)f.name=k.name;if(k.ramp){f.ramp=k.ramp;f.trim=k.trim;}f.prof=k.prof||null;
 }
 
 const G={state:'menu',mode:'1p',diff:'knight',ctl:'mouse',f:[],P:[],wins:[0,0],round:1,hitstop:0,shake:0,slowmo:0,time:0,overT:0,introT:0,calledFight:true,daze:0,tf:[1,1],atkId:0,paused:false,flAcc:0,hb:0,lastTink:0,attractT:0,winner:0};
@@ -1556,7 +1560,7 @@ function setBlade(k,d,sa,inv){
 }
 function skel(f){
   const p=f.pose,d=f.dir,X=f.x;
-  const S=q=>[X+d*q[0],GROUND+q[1]];
+  const sc=f.scale||1,S=q=>[X+d*q[0]*sc,GROUND+q[1]*sc];
   const at=(o,v,k)=>[o[0]+v[0]*k,o[1]+v[1]*k];
   const hip=[0,-26.5+p.crouch];
   const lr=p.lean*DEG,td=[Math.sin(lr),-Math.cos(lr)];
@@ -1730,9 +1734,9 @@ function plume(f,k){
     const s=1-i/10;put(x,y,rampAt(R,0.9*s+0.1,x,y));put(x,y+1,rampAt(R,0.5*s,x,y+1));if(i<6)put(x,y-1,rampAt(R,Math.min(1,s+0.1),x,y-1));}
 }
 function drawFighter(f){
-  const k=f.j,d=f.dir;
-  const C=(a,b,ra,rb,sh)=>capsule(a[0],a[1],b[0],b[1],ra,rb,sh);
-  const foot=(an,part,dim)=>capsule(an[0],an[1],an[0]+d*3.6,an[1]+1.1,1.8,1.4,zoneShader(f,'legs',part,LEATHER,dim,null));
+  const k=f.j,d=f.dir,sc=f.scale||1;
+  const C=(a,b,ra,rb,sh)=>capsule(a[0],a[1],b[0],b[1],ra*sc,rb*sc,sh);
+  const foot=(an,part,dim)=>capsule(an[0],an[1],an[0]+d*3.6*sc,an[1]+1.1*sc,1.8*sc,1.4*sc,zoneShader(f,'legs',part,LEATHER,dim,null));
   C(k.hipB,k.knB,3.1,2.7,zoneShader(f,'legs',2,HOSE,.7,{lames:4}));
   C(k.knB,k.anB,2.6,2.0,zoneShader(f,'legs',3,HOSE,.7,{lames:3}));
   foot(k.anB,3,.7);
@@ -1755,10 +1759,10 @@ function drawFighter(f){
   C(k.elF,k.hF,2.3,1.9,zoneShader(f,'armF',1,CLOTH,1,{lames:3}));
   C(k.elF,k.elF,2.2,2.2,zoneShader(f,'armF',1,CLOTH,1,{plateOnly:true}));
   C(k.hF,k.hF,2.0,2.0,gauntlet(f,'armF',1));
-  capsule(k.shF[0]-d*0.4,k.shF[1]-0.6,k.shF[0]-d*0.4,k.shF[1]-0.6,3.6,3.6,zoneShader(f,'armF',0,CLOTH,1,{plateOnly:true}));
+  capsule(k.shF[0]-d*0.4,k.shF[1]-0.6,k.shF[0]-d*0.4,k.shF[1]-0.6,3.6*sc,3.6*sc,zoneShader(f,'armF',0,CLOTH,1,{plateOnly:true}));
 }
 function shadow(f){
-  const cx=f.dead?f.x-f.dir*9:f.x,w=f.dead?21:13;
+  const sc=f.scale||1,cx=f.dead?f.x-f.dir*9*sc:f.x,w=(f.dead?21:13)*sc;
   for(let y=-2;y<=2;y++)for(let x=-w;x<=w;x++){const e=(x/w)**2+(y/2.6)**2;if(e<1)dark(cx+x,GROUND+y,0.55+0.45*e);}
 }
 function drawTrail(f){
@@ -2978,8 +2982,14 @@ function crestURL(ci){if(CRESTS[ci])return CRESTS[ci];const C=CITIES[ci],w=15,h=
   x.putImageData(id,0,0);return CRESTS[ci]=`url('${cv.toDataURL()}')`;}
 // ---------- version and update notes ----------
 // Bump GAME_VERSION and add an entry at the top of CHANGELOG for every update: players see the popup once per version.
-const GAME_VERSION='1.6.1';
+const GAME_VERSION='1.7.0';
 const CHANGELOG=[
+  {v:'1.7.0',date:'27 Oct 2026',title:'The Kings of Christendom',
+   slides:[
+    {title:'Face the real rulers',text:'Each kingdom\'s final fight is now against its real ruler of 1350: King Edward III, King John II, Emperor Charles IV, Grand Master Winrich von Kniprode and Emperor John VI Kantakouzenos.'},
+    {title:'Larger than life',text:'Rulers stand a head taller than you, in gilded plate with a crowned helm. Their armour is heavier too, so bring your best steel to the throne room.'}
+   ],
+   items:['Each kingdom\'s ruler is a fixed historical figure.','Rulers are bigger and wear gilded crowned armour.']},
   {v:'1.6.1',date:'27 Oct 2026',title:'Hold your ground',
    slides:[
     {title:'Your sword stays put',text:'Getting knocked back, dodging or kicking no longer yanks your sword out of position. Your body reels, but the point stays exactly where you hold it.'}
