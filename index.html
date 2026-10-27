@@ -155,7 +155,7 @@ footer{padding:30px 0 50px;color:var(--muted);font-size:14px;text-align:center;b
 <script>
 (function(){
   var btn=document.getElementById('getGame'),note=document.getElementById('getNote'),ask=null;
-  var ua=navigator.userAgent,phone=/iphone|ipad|ipod|android|mobile/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(matchMedia('(pointer: coarse)').matches&&!matchMedia('(any-pointer: fine)').matches);
+  var ua=navigator.userAgent,phone=/iphone|ipad|ipod|android|mobi/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
   if(phone)document.getElementById('phoneBar').hidden=false;
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
   addEventListener('beforeinstallprompt',function(e){e.preventDefault();ask=e;});
