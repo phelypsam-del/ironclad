@@ -2,7 +2,7 @@
   "name": "Ironclad Duel",
   "short_name": "Ironclad",
   "description": "A pixel-art knight fighting game. Swing your sword with the mouse and fight your way across medieval Europe.",
-  "start_url": "./",
+  "start_url": "./play.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "landscape",
@@ -27,5 +27,6 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "id": "./"
 }
