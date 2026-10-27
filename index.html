@@ -630,6 +630,9 @@ body{font-weight:500}
 .acctrow{justify-content:center;gap:8px}
 .acctmsg{min-height:1.2em;color:#8f1418!important;font-weight:600}
 #acctOut[hidden],#acctInBox[hidden],#acctLead[hidden]{display:none!important}
+
+.acctfloat{position:absolute;left:50%;bottom:2.2cqw;transform:translateX(-50%);z-index:4;font-size:max(16px,1.9cqw)!important;padding:.45em 1.6em .55em!important;white-space:nowrap}
+.acctfloat[hidden]{display:none!important}
 </style>
 
 <div class="stage inmenu" id="stage">
@@ -663,12 +666,12 @@ body{font-weight:500}
         <button class="mbtn" id="onlineBtn" type="button" hidden>Fight online</button>
         <button class="mbtn" id="setBtn" type="button">Rules</button>
         <button class="mbtn" id="howBtn" type="button">How to fight</button>
-        <button class="mbtn" id="acctBtn" type="button" hidden>Sign in</button>
         <button class="mbtn" id="soundBtn" type="button"><span id="soundTxt">Sound: on</span></button>
         <button class="mbtn" id="fsBtn" type="button">Fullscreen</button>
       </nav>
       <p class="sum" id="ruleSum"></p>
       <button class="ver" id="verTxt" type="button" title="What's new"></button>
+      <button class="pbtn acctfloat" id="acctBtn" type="button" hidden>Sign in</button>
     </div>
     <div class="pfull pmake" id="pMake" hidden>
       <div class="inner">
@@ -1143,7 +1146,7 @@ function cloudInit(){if(!ACCT_OK||CLOUD.ready)return;fbLoad(ok=>{if(!ok||!window
   catch(e){CLOUD.err='Sign-in is unavailable right now.';acctRender();}});}
 function acctMsg(t){$('acctMsg').textContent=t||'';}
 function acctRender(){const b=$('acctBtn');if(!b)return;b.hidden=!ACCT_OK;const u=CLOUD.user;
-  b.textContent=u?'Account':'Sign in';
+  b.textContent=u?`⚑ ${(u.displayName||u.email||'Account').split(' ')[0]} · Account`:'⚑ Sign in to save';
   $('acctOut').hidden=!!u;$('acctInBox').hidden=!u;$('acctTitle').textContent=u?'Signed in':'Sign in to save';
   $('acctLead').hidden=!!u;
   if(u){$('acctWho').textContent=`Signed in as ${u.displayName?u.displayName+' ('+(u.email||'')+')':(u.email||'player')}.`;
