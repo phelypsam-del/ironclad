@@ -56,6 +56,8 @@ button:focus-visible{outline:2px solid var(--or);outline-offset:2px}
 .bar .hpv{background:linear-gradient(#dc4640,#8f1418)}
 .bar.st{height:6px}
 .bar .stv{background:linear-gradient(#ecc95e,#97761f)}
+.bar i.stx{left:auto;right:0;background:repeating-linear-gradient(135deg,#4a1a14 0 2px,#1c0c0a 2px 4px)}
+.pl.r .bar i.stx{right:auto;left:0}
 .status{font-size:12px;min-height:17px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
 .pl.r .status{justify-content:flex-end}
 .status .b{color:#ff7466}
@@ -686,12 +688,11 @@ body{font-weight:500}
         <button class="mbtn" id="startBtn" type="button">Quick duel</button>
         <button class="mbtn" id="armBtn" type="button">Armoury</button>
         <button class="mbtn" id="onlineBtn" type="button" hidden>Fight online</button>
-        <button class="mbtn" id="setBtn" type="button">Rules</button>
         <button class="mbtn" id="howBtn" type="button">How to fight</button>
         <button class="mbtn" id="soundBtn" type="button"><span id="soundTxt">Sound: on</span></button>
         <button class="mbtn" id="fsBtn" type="button">Fullscreen</button>
       </nav>
-      <p class="sum" id="ruleSum"></p>
+      <p class="sum" id="ruleSum" hidden></p>
       <button class="ver" id="verTxt" type="button" title="What's new"></button>
       <div class="bottombar"><button class="pbtn" id="installBtn" type="button" hidden>Install the game</button><button class="pbtn acctfloat" id="acctBtn" type="button" hidden>Sign in</button></div>
     </div>
@@ -1262,16 +1263,23 @@ async function acctDo(kind){if(!CLOUD.ready){acctMsg('Still connecting… try ag
   catch(e){acctMsg(authErr(e));}}
 let CAMP=loadCamp();
 const kv=(v,zk)=>typeof v==='number'?v:((v&&v[zk])||0);
+// what a kit weighs: shop gear carries its own weight; for foes it is reckoned from how much plate and mail they wear
+// how fast the sword can move before swinging it starts to cost breath
+const SWING_FREE=200;
+function kitWeight(k){let pl=0,ml=0;for(const z of ZK){pl+=kv(k.plate,z);ml+=kv(k.mail,z);}pl/=ZK.length;ml/=ZK.length;
+  return pl/100*12+(pl<20?ml/100*5:0)+((WEAPONS[k.wpn||'longsword']||{}).wt||0)+((k.shield&&SHIELDS[k.shield]||{}).wt||0);}
+// heavier harness, less breath: every point of weight past the first four costs 1.6 stamina, never below 60
+function stamCap(wt){return Math.round(clamp(100-Math.max(0,(wt||0)-4)*1.6,60,100));}
 function applyKit(f,k){
   for(const zk of ZK){const z=f.zones[zk];z.plate=kv(k.plate,zk);z.mail=kv(k.mail,zk);z.amax=z.plate*.6+z.mail*.4;z.flesh=100;z.tint=(k.tint&&k.tint[zk])||null;z.style=(k.style&&k.style[zk])||null;}
-  f.zones.head.hs=k.hs||'visor';f.her=k.her||null;f.her2=k.her2||null;f.jupon=!!k.jupon;f.crownK=k.crownK||null;f.jbelt=k.jbelt||null;f.wt=k.wt||0;f.zones.head.hood=!!k.hood;f.zones.head.crest=k.crest||null;f.cross=!!k.cross;
+  f.zones.head.hs=k.hs||'visor';f.her=k.her||null;f.her2=k.her2||null;f.jupon=!!k.jupon;f.crownK=k.crownK||null;f.jbelt=k.jbelt||null;f.wt=k.wt!=null?k.wt:kitWeight(k);f.stMax=stamCap(f.wt);f.st=Math.min(f.st,f.stMax);f.zones.head.hood=!!k.hood;f.zones.head.crest=k.crest||null;f.cross=!!k.cross;
   for(const zk of ZK)f.zones[zk].cloth=(k.cloth&&k.cloth[zk])||null;
   if(k.look)f.look=resolveLook(k.look);
   f.wpn=WEAPONS[k.wpn||'longsword'];f.shield=k.shield&&k.shield!=='none'?SHIELDS[k.shield]:null;
   f.maxHp=f.hp=f.ghost=k.hp||100;f.scale=k.scale||1;if(k.name)f.name=k.name;if(k.ramp){f.ramp=k.ramp;f.trim=k.trim;}f.prof=k.prof||null;
 }
 
-const G={state:'menu',mode:'1p',diff:'knight',ctl:'mouse',f:[],P:[],wins:[0,0],round:1,hitstop:0,shake:0,slowmo:0,time:0,overT:0,introT:0,calledFight:true,daze:0,tf:[1,1],atkId:0,paused:false,flAcc:0,hb:0,lastTink:0,attractT:0,winner:0};
+const G={state:'menu',mode:'1p',diff:'champion',ctl:'mouse',f:[],P:[],wins:[0,0],round:1,hitstop:0,shake:0,slowmo:0,time:0,overT:0,introT:0,calledFight:true,daze:0,tf:[1,1],atkId:0,paused:false,flAcc:0,hb:0,lastTink:0,attractT:0,winner:0};
 const P=G.P;
 
 // ---------- audio: everything is synthesised, run through an outdoor reverb ----------
@@ -1469,8 +1477,8 @@ function aSwish(f,spd){if(!AU.C||AU.C.state!=='running')return;const C=AU.C,id=f
   if(!S){S={};const s=C.createBufferSource();s.buffer=AU.noise;s.loop=true;S.bp=C.createBiquadFilter();S.bp.type='bandpass';S.bp.Q.value=2.2;S.wh=C.createBiquadFilter();S.wh.type='bandpass';S.wh.Q.value=14;
     S.g=C.createGain();S.g.gain.value=0;S.wg=C.createGain();S.wg.gain.value=0;S.p=C.createStereoPanner?C.createStereoPanner():C.createGain();
     s.connect(S.bp);S.bp.connect(S.g);s.connect(S.wh);S.wh.connect(S.wg);S.g.connect(S.p);S.wg.connect(S.p);S.p.connect(AU.out);if(AU.rev)S.p.connect(AU.rev);s.start(0,Math.random());SWISH[id]=S;}
-  const t=C.currentTime,k=clamp((spd-70)/650,0,1),a=ok()&&G.state==='fight'&&!G.paused?Math.pow(k,1.6):0;
-  S.g.gain.setTargetAtTime(a*.3,t,.025);S.wg.gain.setTargetAtTime(a*a*.12,t,.03);
+  const t=C.currentTime,k=clamp((spd-90)/700,0,1),live=ok()&&G.state==='fight'&&!G.paused&&!f.dead&&!(G.overT>0)&&!(G.slowmo>0),a=live?Math.pow(k,1.8):0;
+  S.g.gain.setTargetAtTime(a*.1,t,live?.06:.02);S.wg.gain.setTargetAtTime(a*a*.03,t,live?.07:.02);
   S.bp.frequency.setTargetAtTime(500+2600*k,t,.03);S.wh.frequency.setTargetAtTime(900+1900*k,t,.03);if(S.p.pan)S.p.pan.setTargetAtTime(panOf(f.x),t,.05);}
 function swishOff(){if(!AU.C)return;const t=AU.C.currentTime;for(const S of SWISH)if(S){S.g.gain.setTargetAtTime(0,t,.05);S.wg.gain.setTargetAtTime(0,t,.05);}}
 // ---- voices: a glottal pulse with jitter and roughness, shaped by four formants ----
@@ -2063,8 +2071,8 @@ function updParticles(dt){
     if(dead){P[i]=P[P.length-1];P.pop();}
   }
 }
-function drawParticles(){
-  for(let i=0;i<P.length;i++){const p=P[i];
+function drawParticles(back){
+  for(let i=0;i<P.length;i++){const p=P[i];if((p.t==='flame'||p.t==='ember')!==!!back)continue;
     switch(p.t){
       case 'spark':{const u=p.life/p.max;const c=u>.6?[255,250,220]:u>.3?[255,196,90]:[220,100,36];add(p.x,p.y,c[0],c[1],c[2]);add(p.px,p.py,c[0]*.45,c[1]*.35,c[2]*.2);break;}
       case 'blood':pset(FB,p.x,p.y,BLOOD[p.sz>1?2:1]);if(p.sz>1)pset(FB,p.x+1,p.y,BLOOD[1]);break;
@@ -2112,7 +2120,7 @@ function resolveHit(att,def){
   const cp=def.j.mid;
   if(def.state==='block'&&def.blockH===h){
     if(def.blockT<0.16){
-      att.state='stagger';att.stagT=0.65;att.vx=-att.dir*60;def.st=Math.min(100,def.st+8);def.stats.parries++;
+      att.state='stagger';att.stagT=0.65;att.vx=-att.dir*60;def.st=Math.min(def.stMax||100,def.st+8);def.stats.parries++;
       sparks(cp[0],cp[1],24,-att.dir,1.4);aParry(pan);G.hitstop=.13;G.shake=3;callout('Parry!');
       log(`${def.name} parries ${att.name}'s ${A.name} and throws him off balance.`,'good');return;
     }
@@ -2215,7 +2223,7 @@ function updateFighter(f,o,c,dt){
   if(f.st<=0.5&&f.state!=='attack'&&f.state!=='exhausted'&&f.state!=='kick'){f.state='exhausted';f.atk=null;f.breathT=.4;f.vx*=0.3;callout(`${f.name} is spent`);
     log(`${f.name} drops to his knees, out of breath.`,'warn');aThud(.5,panOf(f.x));dust(f.x,GROUND,6);}
   const busy=f.state==='attack'||f.state==='dodge';
-  f.st=Math.min(100,f.st+(f.state==='exhausted'?25:f.state==='block'?3:(busy||f.state==='kick')?0:13)*dt*(f.hp<35?0.7:1));
+  f.st=Math.min(f.stMax||100,f.st+(f.state==='exhausted'?25:f.state==='block'?3:(busy||f.state==='kick')?0:13)*dt*(f.hp<35?0.7:1));
   f.height=c.up?'high':c.down?'low':'mid';
   const spd=(1-Math.min(.5,f.limp))*(f.st<15?.75:1);
   const mv=(c.right?1:0)-(c.left?1:0);
@@ -2236,7 +2244,7 @@ function updateFighter(f,o,c,dt){
       if(a.t>=A.W&&a.t<A.W+A.A)f.vx=f.dir*(a.type==='thrust'?95:45);
       if(a.t>=A.W+A.A+A.R)f.state='idle';
       break;}
-    case 'exhausted':if(f.st>=100)f.state='idle';break;
+    case 'exhausted':if(f.st>=(f.stMax||100)-.5)f.state='idle';break;
     case 'kick':f.kickT+=dt;if(!f.kickDone&&f.kickT>=.2){f.kickDone=true;kickHit(f,o);}if(f.kickT>=.5)f.state='idle';break;
     case 'stagger':f.stagT-=dt;if(f.stagT<=0){f.state='idle';f.stagEnd=G.time;}break;
     case 'dodge':f.dodgeT+=dt;if(f.dodgeT>0.3)f.state='idle';break;
@@ -2539,7 +2547,7 @@ function updMouseSword(f,dt){
   m.prevHx=m.hx;
   m.inv=inv?1:0;
   const ownV=f.tipVrel||0;
-  if(ownV>80&&(f.state==='idle'||f.state==='walk')&&(f.pushed||0)<1&&G.time-(f.stagEnd||-9)>.35)f.st=Math.max(0,f.st-Math.pow(Math.min(ownV,800)-80,1.35)*0.017*dt*(1+(f.wt||0)*.025));
+  if(ownV>SWING_FREE&&(f.state==='idle'||f.state==='walk')&&(f.pushed||0)<1&&G.time-(f.stagEnd||-9)>.35)f.st=Math.max(0,f.st-Math.pow(Math.min(ownV,800)-SWING_FREE,1.35)*0.017*dt*(1+(f.wt||0)*.025));
 }
 function bodyHit(o,p){const k=o.j;
   const C=[[k.headA,k.headB,4.8,'head'],[k.shF,k.elF,2.8,'armF'],[k.elF,k.hF,2.5,'armF'],[k.hip,k.top,6.4,'torso'],[k.skA,k.skB,5.6,'torso'],[k.shB,k.elB,2.7,'armB'],[k.elB,k.hB,2.4,'armB'],[k.hipF,k.knF,3.3,'legs'],[k.knF,k.anF,2.8,'legs'],[k.hipB,k.knB,3.2,'legs'],[k.knB,k.anB,2.7,'legs']];
@@ -2751,6 +2759,7 @@ function render(){
   G.tf[1]=.84+Math.sin(G.time*15.7+2)*.07+Math.sin(G.time*31.3)*.05+Math.random()*.04;
   drawCrowd();
   for(const f of G.f)shadow(f);
+  drawParticles(true);
   const order=G.f.slice().sort((x,y)=>(x.dead?0:1)-(y.dead?0:1));
   for(const f of order)drawFighter(f);
   for(const f of G.f)drawTrail(f);
@@ -2795,11 +2804,11 @@ function buildHUD(){
     const tx=document.createElement('span');const tg=document.createElement('span');tg.className='tag';
     nm.append(cr,tx,tg);
     const hp=document.createElement('div');hp.className='bar';const gh=document.createElement('i');gh.className='ghost';const hv=document.createElement('i');hv.className='hpv';hp.append(gh,hv);
-    const st=document.createElement('div');st.className='bar st';const sv=document.createElement('i');sv.className='stv';st.append(sv);
+    const st=document.createElement('div');st.className='bar st';const sv=document.createElement('i');sv.className='stv';const sx=document.createElement('i');sx.className='stx';st.append(sx,sv);
     const status=document.createElement('div');status.className='status';
     info.append(nm,hp,st,status);el.append(info);
     const parts={};for(const zk of ZK)parts[zk]=[...doll.querySelectorAll(`[data-z="${zk}"]`)];
-    HUD[i]={tx,tg,hv,gh,sv,status,parts,last:'',cols:{}};
+    HUD[i]={tx,tg,hv,gh,sv,sx,status,parts,last:'',cols:{}};
   }
 }
 function hudNames(){
@@ -2814,7 +2823,7 @@ function hudNames(){
 function hudUpdate(){
   for(let i=0;i<2;i++){const f=G.f[i],h=HUD[i];
     const mh=f.maxHp||100;f.ghost=f.ghost>f.hp?f.ghost-Math.max(.08,(f.ghost-f.hp)*.03):f.hp;
-    h.hv.style.width=Math.max(0,f.hp/mh*100)+'%';h.gh.style.width=Math.max(0,f.ghost/mh*100)+'%';h.sv.style.width=f.st+'%';
+    h.hv.style.width=Math.max(0,f.hp/mh*100)+'%';h.gh.style.width=Math.max(0,f.ghost/mh*100)+'%';h.sv.style.width=f.st+'%';if(h.sx)h.sx.style.width=(100-(f.stMax||100))+'%';
     const parts=[];
     if(f.dead)parts.push(['b','Fallen']);
     else{if(f.bleed>.05)parts.push(['b',f.bleed>.5?'Bleeding heavily':'Bleeding']);
@@ -3269,8 +3278,20 @@ function crestURL(ci){if(CRESTS[ci])return CRESTS[ci];const C=CITIES[ci],w=15,h=
   x.putImageData(id,0,0);return CRESTS[ci]=`url('${cv.toDataURL()}')`;}
 // ---------- version and update notes ----------
 // Bump GAME_VERSION and add an entry at the top of CHANGELOG for every update: players see the popup once per version.
-const GAME_VERSION='1.12.0';
+const GAME_VERSION='1.13.1';
 const CHANGELOG=[
+  {v:'1.13.1',date:'28 Oct 2026',title:'Easier breathing',
+   slides:[{title:'Easier breathing',text:'Moving your sword around no longer tires you unless you really swing it. Guard changes and gentle movements are free; only fast swings cost stamina.'}],
+   items:['Higher sword speed before stamina starts to drain']},
+  {v:'1.13.0',date:'28 Oct 2026',title:'The weight of steel',
+   slides:[{title:'The weight of steel',text:'Armour now costs you breath. The heavier your kit, the lower your stamina bar can go: the hatched part at the end of the bar is what your armour takes away. A man in a tunic has his full stamina; a knight in full plate with a greatsword fights with about two thirds of it. Your opponents carry the same burden. The armoury shows the stamina each set leaves you.'}],
+   items:['Stamina cap depends on armour weight','Hatched bar shows stamina lost to weight','Stamina shown in the armoury']},
+  {v:'1.12.2',date:'28 Oct 2026',title:'Fixes',
+   slides:[{title:'Fixes',text:'Torch flames no longer burn in front of the fighters, and the swish of a swinging sword is much softer and falls silent as soon as a bout is decided.'}],
+   items:['Torch flames drawn behind fighters','Quieter sword swish, no noise at the end of a bout']},
+  {v:'1.12.1',date:'28 Oct 2026',title:'No mercy',
+   slides:[{title:'No mercy',text:'The Rules menu is gone. Quick duels are now always fought against a Champion, the hardest foe in the game.'}],
+   items:['Rules menu removed','Quick duels always at Champion difficulty']},
   {v:'1.12.0',date:'28 Oct 2026',title:'Full sets',
    slides:[{img:'data:image/png;base64,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',title:'Every kingdom\'s full kit',text:'Each kingdom\'s market now sells the whole set: helm, armour, legs, weapon and a shield painted in its arms.'},{img:'data:image/png;base64,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',title:'The royal sets',text:'Beat a king and his full set goes on sale in his kingdom: crowned helm, royal armour, gilded legs, his shield of arms and his own weapon, such as the Imperial Sword or the battle axe King John fought with at Poitiers. Royal gear can only be bought after that king is defeated. Relics are still yours for free.'}],
    items:['Kingdom legs and painted shields','Royal legs, shields and weapons','Shields show your coat of arms']},
@@ -3740,7 +3761,7 @@ function statsFor(slot,it){
   if(slot==='shield')return [['Cover',it.rad||0,4.6,1],['Weight',it.wt||0,4,0,true]];
   const st=[['Plate',it.plate,175,0],['Mail',it.mail,100,0]];if(slot==='body'&&it.arm!=null)st.push(['Arm plate',it.arm,175,0]);st.push(['Weight',it.wt,7,0,true]);return st;}
 function fmt(v,dec){return dec?(+v).toFixed(2).replace(/0$/,''):Math.round(v);}
-function kitTotals(k){const P=k.plate,avg=Math.round((P.head+P.torso+P.armF+P.legs)/4),w=WEAPONS[k.wpn];return [['Protection',avg],['Weight',k.wt],['Damage',w.dmg.toFixed(2)+'×'],['Reach',w.len]];}
+function kitTotals(k){const P=k.plate,avg=Math.round((P.head+P.torso+P.armF+P.legs)/4),w=WEAPONS[k.wpn];return [['Protection',avg],['Weight',k.wt],['Stamina',stamCap(k.wt)],['Damage',w.dmg.toFixed(2)+'×'],['Reach',w.len]];}
 function renderShop(){fitSoon();
   $('shopGold').innerHTML=goldTxt();
   if(G.merch==null||G.merch>CAMP.city)G.merch=CAMP.city;
@@ -3838,7 +3859,7 @@ function fitAll(){try{
   fitBox($('over').querySelector('.card'),$('over'));fitBox($('pause').querySelector('.card'),$('pause'));}catch(_){}}
 const fitSoon=()=>requestAnimationFrame(()=>{fitAll();requestAnimationFrame(fitAll);});
 function showPanel(id){const was=['pMain','pSet','pHow','pAcct','pMap','pKing','pCity','pShop','pMake','pOnline'].find(k=>$(k)&&!$(k).hidden);if(was&&was!==id){if(id==='pShop')aUI('bell');else aUI('page');}for(const k of ['pMain','pSet','pHow','pAcct','pMap','pKing','pCity','pShop','pMake','pOnline'])$(k).hidden=k!==id;fitSoon();const b=$(id).querySelector('button');if(b)b.focus({preventScroll:true});}
-function ruleSum(){$('ruleSum').textContent='Foe: '+cap(G.diff);}
+function ruleSum(){$('ruleSum').textContent='';}
 function toMenu(){G.state='menu';G.paused=false;if(AU.C&&AU.C.state==='suspended')AU.C.resume();$('over').hidden=true;$('pause').hidden=true;$('menu').hidden=false;$('stage').classList.add('inmenu');showPanel(typeof arguments[0]==='string'?arguments[0]:'pMain');resetFighters();}
 function togglePause(){if(G.state!=='fight'||G.mode==='online')return;G.paused=!G.paused;$('pause').hidden=!G.paused;fitSoon();if(G.paused)$('resumeBtn').focus({preventScroll:true});
   if(G.paused&&AU.C)AU.C.suspend();else if(AU.C)AU.C.resume();}
@@ -3936,7 +3957,6 @@ function wire(){
     else if(/mkarrow|updarrow/.test(b.className)||/^[‹›«]$/.test(tx))aUI('flip');
     else if(/^(Back|Close|Leave|Main menu)/i.test(tx)||/Back$/.test(b.id))aUI('back');
     else aUI('click');},true);
-  $('setBtn').addEventListener('click',()=>showPanel('pSet'));
   $('howBtn').addEventListener('click',()=>showPanel('pHow'));
   document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>{showPanel('pMain');ruleSum();}));
   document.querySelectorAll('[data-log]').forEach(b=>b.addEventListener('click',()=>{logEl.classList.toggle('off',b.dataset.log==='0');
@@ -3974,7 +3994,7 @@ function wire(){
 function start(data){
   data=data||{};
   if(Array.isArray(data.wins))G.wins=data.wins;
-  if(data.mode)G.mode=data.mode;if(data.diff)G.diff=data.diff;
+  if(data.mode)G.mode=data.mode;
   genUI();genBG();BGA.set(BG);CROWDA=CROWD.slice();STAGE.set(BG);buildHUD();wire();
   $('acctBtn').addEventListener('click',()=>{cloudInit();acctRender();showPanel('pAcct');});
   $('acctGoogle').addEventListener('click',()=>acctDo('google'));$('acctIn').addEventListener('click',()=>acctDo('in'));$('acctNew').addEventListener('click',()=>acctDo('new'));
