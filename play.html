@@ -655,6 +655,7 @@ body{font-weight:500}
 
 .relictoast{position:absolute;left:50%;bottom:7cqw;transform:translateX(-50%);z-index:35;max-width:min(720px,88%);padding:.7em 1.2em .8em;background:#e2d9ba;color:#2a1608;border:max(3px,.3cqw) solid #2e2a1e;box-shadow:inset 0 0 0 2px #f0e9d0,0 0 0 max(2px,.2cqw) #c9a25a,0 .6cqw 0 rgba(0,0,0,.45);font-family:var(--f-ui);font-weight:600;font-size:max(13px,1.4cqw);text-align:center;cursor:pointer;animation:nvdrop .35s ease-out}
 .relictoast[hidden]{display:none!important}
+.nocur,.nocur *{cursor:none!important}
 </style>
 
 <div class="stage inmenu" id="stage">
@@ -2101,6 +2102,7 @@ const $=id=>document.getElementById(id);
 const logEl=$('log'),LOG=[];
 function log(msg,cls){LOG.push([msg,cls||'mute']);if(LOG.length>4)LOG.shift();logEl.replaceChildren(...LOG.map(([m,c])=>{const d=document.createElement('div');d.className=c;d.textContent=m;return d;}));}
 const callEl=$('callout');
+function hitCallout(){}
 function callout(t){if(G.state==='menu')return;callEl.textContent=t;callEl.classList.remove('show');void callEl.offsetWidth;callEl.classList.add('show');}
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 const isHuman=f=>G.state==='fight'&&f.id===0;
@@ -2121,12 +2123,12 @@ function resolveHit(att,def){
   if(def.state==='block'&&def.blockH===h){
     if(def.blockT<0.16){
       att.state='stagger';att.stagT=0.65;att.vx=-att.dir*60;def.st=Math.min(def.stMax||100,def.st+8);def.stats.parries++;
-      sparks(cp[0],cp[1],24,-att.dir,1.4);aParry(pan);G.hitstop=.13;G.shake=3;callout('Parry!');
+      sparks(cp[0],cp[1],24,-att.dir,1.4);aParry(pan);G.hitstop=.13;G.shake=3;hitCallout('Parry!');
       log(`${def.name} parries ${att.name}'s ${A.name} and throws him off balance.`,'good');return;
     }
     const cost=A.blockCost*(h==='low'?1.1:1);
     if(def.st<cost){def.st=0;def.state='stagger';def.stagT=0.75;def.vx=att.dir*70;sparks(cp[0],cp[1],14,-att.dir,1);aClang(700,.75,.9,pan);
-      G.hitstop=.09;G.shake=4;callout('Guard broken');log(`${att.name} batters through ${def.name}'s exhausted guard.`,'warn');return;}
+      G.hitstop=.09;G.shake=4;hitCallout('Guard broken');log(`${att.name} batters through ${def.name}'s exhausted guard.`,'warn');return;}
     def.st-=cost;def.vx=att.dir*(A.blunt?60:35);sparks(cp[0],cp[1],A.blunt?12:8,-att.dir,.9);aClang(rand(950,1250),.55,1.1,pan);
     G.hitstop=.06;G.shake=Math.max(G.shake,1.5);log(`${def.name} catches the ${A.name} on his blade.`,'mute');return;
   }
@@ -2135,7 +2137,7 @@ function resolveHit(att,def){
 function breakPlate(att,def,zk,pos){
   debris(pos[0],pos[1],zk==='torso'?13:8,att.dir,[STEEL[5],STEEL[3],STEEL[2]]);
   if(zk==='head')debris(pos[0],pos[1]-4,6,att.dir,[def.ramp[4],def.ramp[2]]);
-  sparks(pos[0],pos[1],20,att.dir,1.4);aBreak(panOf(def.x));callout(`${cap(PIECE[zk])} shattered`);
+  sparks(pos[0],pos[1],20,att.dir,1.4);aBreak(panOf(def.x));hitCallout(`${cap(PIECE[zk])} shattered`);
   att.stats.broke++;G.shake+=3;G.hitstop+=.04;
 }
 function hitZone(att,def,zk,A,cp){
@@ -2156,7 +2158,7 @@ function hitZone(att,def,zk,A,cp){
     body=A.dmg*(gap?Math.max(.7,A.vsMail):A.vsMail)*pw;
     rings(pos[0],pos[1],gap?4:7,att.dir);aMail(.7,pan);if(A.blunt)aThud(.5,pan);else aFlesh(.3,pan);
     if(body>7){def.bleed+=body*0.008;blood(pos[0],pos[1],6,att.dir);addMark(def,zk,2);}
-    if(gap){msg=`${nm}'s thrust finds the ${GAP[zk]}! The ${MAILN[zk]} beneath turns some of it.`;cls='warn';callout('Gap found');}
+    if(gap){msg=`${nm}'s thrust finds the ${GAP[zk]}! The ${MAILN[zk]} beneath turns some of it.`;cls='warn';hitCallout('Gap found');}
     else if(z.mail<=0){msg=`${nm}'s ${A.name} rips open ${dn}'s ${MAILN[zk]}.`;cls='warn';}
     else msg=`${nm}'s ${A.name} bites into ${dn}'s ${MAILN[zk]}.`;
   }else{
@@ -2167,11 +2169,11 @@ function hitZone(att,def,zk,A,cp){
     if(!A.blunt)att.swordBlood=Math.min(10,att.swordBlood+2);
     if(zk==='legs')def.limp+=0.1;if(zk==='armF')def.armWound+=0.08;
     msg=gap?`${nm}'s thrust slips through the ${GAP[zk]} into flesh!`:`${nm}'s ${A.name} cuts deep into ${dn}'s ${FLESH[zk]}.`;cls='bad';
-    if(gap)callout('Gap found');
+    if(gap)hitCallout('Gap found');
   }
   z.flesh=Math.max(0,(z.flesh??100)-body*ZMULT[zk]*3);
   if((zk==='armF'||zk==='armB')&&!z.broken&&limbCond(z)<.15){z.broken=true;
-    setTimeout(()=>{aSnap(pan);aGrunt(def,pan);},60);callout(zk==='armF'?'Sword arm broken':'Arm broken');
+    setTimeout(()=>{aSnap(pan);aGrunt(def,pan);},60);hitCallout(zk==='armF'?'Sword arm broken':'Arm broken');
     log(`${def.name}'s ${zk==='armF'?'sword arm':'off arm'} snaps!`,'bad');
     if(!(def.zones.armF.broken&&def.zones.armB.broken))log(`${def.name} must fight one-handed now. His blade wavers.`,'warn');
     if(def.zones.armF.broken&&def.zones.armB.broken&&!def.swordDropped){def.swordDropped=true;const k=def.j;
@@ -2220,7 +2222,7 @@ function updateFighter(f,o,c,dt){
       P.push({t:'blood',x:p[0]+rand(-2,2),y:p[1],px:p[0],py:p[1],vx:rand(-6,6),vy:rand(-4,10),g:300,gy:GROUND+rand(-2,4),sz:1,life:5,max:5});
       f.drip=rand(.06,.3)/Math.max(.3,f.bleed*2);}
     if(f.hp<=0){kill(f,null);return;}}
-  if(f.st<=0.5&&f.state!=='attack'&&f.state!=='exhausted'&&f.state!=='kick'){f.state='exhausted';f.atk=null;f.breathT=.4;f.vx*=0.3;callout(`${f.name} is spent`);
+  if(f.st<=0.5&&f.state!=='attack'&&f.state!=='exhausted'&&f.state!=='kick'){f.state='exhausted';f.atk=null;f.breathT=.4;f.vx*=0.3;hitCallout(`${f.name} is spent`);
     log(`${f.name} drops to his knees, out of breath.`,'warn');aThud(.5,panOf(f.x));dust(f.x,GROUND,6);}
   const busy=f.state==='attack'||f.state==='dodge';
   f.st=Math.min(f.stMax||100,f.st+(f.state==='exhausted'?25:f.state==='block'?3:(busy||f.state==='kick')?0:13)*dt*(f.hp<35?0.7:1));
@@ -2555,8 +2557,8 @@ function bodyHit(o,p){const k=o.j;
 function clash(f,o,p,spd){
   const pan=panOf(o.x);f.swCool=.3;sparks(p[0],p[1],spd>220?16:8,f.dir,1);aClang(rand(1000,1300),.55+Math.min(.4,spd/800),1.1,pan);G.hitstop=.04;G.shake=Math.max(G.shake,1);
   f.msw.sa-=Math.sign(f.msw.lastDa||1)*18;
-  if(o.state==='attack'&&o.atk&&!o.atk.blocked&&spd>200){o.atk.blocked=true;o.state='stagger';o.stagT=.6;o.vx=-o.dir*50;f.stats.parries++;aParry(pan);callout('Parry!');log(`${f.name} beats aside ${o.name}'s ${ATK[o.atk.type].name}!`,'good');}
-  else if(o.state==='block'){o.st-=6+spd*.03;if(o.st<=0){o.st=0;o.state='stagger';o.stagT=.6;callout('Guard broken');log(`${f.name} hammers through ${o.name}'s guard.`,'warn');}else log(`${o.name} catches the blow on his blade.`,'mute');}
+  if(o.state==='attack'&&o.atk&&!o.atk.blocked&&spd>200){o.atk.blocked=true;o.state='stagger';o.stagT=.6;o.vx=-o.dir*50;f.stats.parries++;aParry(pan);hitCallout('Parry!');log(`${f.name} beats aside ${o.name}'s ${ATK[o.atk.type].name}!`,'good');}
+  else if(o.state==='block'){o.st-=6+spd*.03;if(o.st<=0){o.st=0;o.state='stagger';o.stagT=.6;hitCallout('Guard broken');log(`${f.name} hammers through ${o.name}'s guard.`,'warn');}else log(`${o.name} catches the blow on his blade.`,'mute');}
 }
 function strike(f,o,zk,p,spd,inv){
   if(o.state==='dodge'&&o.dodgeT<.22)return;
@@ -2567,8 +2569,8 @@ function strike(f,o,zk,p,spd,inv){
   if(spd<minS){f.swCool=.3;if(ok()){const fq=rand(1800,2600);tone(now(),'triangle',fq,fq,.05,.03,.001,panOf(o.x));}
     if(G.time-(f.tapT||0)>2.5&&isHuman(f)){f.tapT=G.time;log(`Too slow. The blade only taps ${o.name}'s harness.`,'mute');}return;}
   let pw=Math.pow(clamp((spd-minS)/(type==='thrust'?210:250),0,1.6),1.25)*(f.st<10?.6:1);
-  if(type==='thrust'&&(f.msw.pull||0)>.25&&G.time-(f.msw.pullT??-9)<.9){const pl=f.msw.pull;pw=Math.min(1.6,pw*(1+pl*0.9));A={...ATK.thrust,name:pl>.6?'full-power thrust':'drawn thrust',gapBonus:pl*.15};f.msw.pull=0;if(pl>.6&&pw>.6)callout('Full thrust!');}
-  if(type==='slash'&&G.time-(f.msw.windT??-9)<.8&&v[1]>0){A=OVERHEAD;pw*=1.25;if(zk==='head'&&pw>.7)callout('Overhead!');}
+  if(type==='thrust'&&(f.msw.pull||0)>.25&&G.time-(f.msw.pullT??-9)<.9){const pl=f.msw.pull;pw=Math.min(1.6,pw*(1+pl*0.9));A={...ATK.thrust,name:pl>.6?'full-power thrust':'drawn thrust',gapBonus:pl*.15};f.msw.pull=0;if(pl>.6&&pw>.6)hitCallout('Full thrust!');}
+  if(type==='slash'&&G.time-(f.msw.windT??-9)<.8&&v[1]>0){A=OVERHEAD;pw*=1.25;if(zk==='head'&&pw>.7)hitCallout('Overhead!');}
   pw*=(f.zones.armF.broken?.6:1)*(f.zones.armB.broken?.85:1)*f.wpn.dmg*(type==='thrust'?f.wpn.thrust:1);pw=Math.max(.04,pw);
   if(type==='thrust'&&f.wpn.gap)A={...A,gapBonus:(A.gapBonus||0)+f.wpn.gap};
   if(f.wpn.kind==='mace'&&type!=='thrust')A={...ATK.murder,name:'mace blow'};
@@ -2702,9 +2704,9 @@ function interact(dt){
     let p=null;for(const s of [.5,1]){const r=segDist(lerp2(at.pb[2],at.cb[2],s),lerp2(at.pb[1],at.cb[1],s),lerp2(df.pb[2],df.cb[2],s),lerp2(df.pb[1],df.cb[1],s));if(r.d<1.8){p=r.p;break;}}
     if(!p)continue;
     const pan=panOf(df.x);
-    if((df.tipV>220&&!A.blunt)||df.tipV>320){at.atk.blocked=true;at.state='stagger';at.stagT=.65;at.vx=-at.dir*60;df.stats.parries++;sparks(p[0],p[1],24,-at.dir,1.4);aParry(pan);G.hitstop=.12;G.shake=3;callout('Parry!');log(`${df.name} beats aside ${at.name}'s ${A.name}!`,'good');continue;}
+    if((df.tipV>220&&!A.blunt)||df.tipV>320){at.atk.blocked=true;at.state='stagger';at.stagT=.65;at.vx=-at.dir*60;df.stats.parries++;sparks(p[0],p[1],24,-at.dir,1.4);aParry(pan);G.hitstop=.12;G.shake=3;hitCallout('Parry!');log(`${df.name} beats aside ${at.name}'s ${A.name}!`,'good');continue;}
     const cost=A.blockCost*.8;
-    if(df.st<cost){df.st=0;at.atk.nb=true;df.state='stagger';df.stagT=.5;sparks(p[0],p[1],14,-at.dir,1);aClang(700,.75,.9,pan);callout('Guard broken');log(`${at.name} smashes through ${df.name}'s guard.`,'warn');continue;}
+    if(df.st<cost){df.st=0;at.atk.nb=true;df.state='stagger';df.stagT=.5;sparks(p[0],p[1],14,-at.dir,1);aClang(700,.75,.9,pan);hitCallout('Guard broken');log(`${at.name} smashes through ${df.name}'s guard.`,'warn');continue;}
     at.atk.blocked=true;df.st-=cost;df.vx=at.dir*(A.blunt?60:35);sparks(p[0],p[1],A.blunt?12:9,-at.dir,1);aClang(rand(950,1250),.6,1.1,pan);G.hitstop=.06;G.shake=Math.max(G.shake,1.5);
     log(`${df.name} catches the ${A.name} on his blade.`,'mute');
   }
@@ -2770,9 +2772,10 @@ function render(){
     FB[i]=pack((r+g*80+r*g*.55)*v,(gg+g*42+gg*g*.25)*v,(b+g*10)*v);}
   if(!REDUCED&&ARENA_KIND!=='throne')for(let k=0;k<70;k++){const sp=150+hash2(k,3)*60,x0=(hash2(k,1)*(W+60)+G.time*-28)%(W+60),y0=(hash2(k,2)*H+G.time*sp)%(H+20)-10;
     const x=((x0%(W+60))+(W+60))%(W+60)-30;for(let j=0;j<4;j++){const X=Math.round(x-j*.35),Y=Math.round(y0-j);if(X>=0&&Y>=0&&X<W&&Y<H){const q=Y*W+X,c=FB[q],a=.1-j*.02;FB[q]=pack((c&255)*(1-a)+170*a,((c>>8)&255)*(1-a)+170*a,((c>>16)&255)*(1-a)+150*a);}}}
-  drawReticle();
   ctx.putImageData(img,0,0);
   cvs.style.cursor=G.state==='fight'?'none':'';
+  // in fullscreen the pointer disappears completely for the whole bout and comes back when it is decided (or when paused)
+  document.documentElement.classList.toggle('nocur',G.state==='fight'&&!G.paused&&!!document.fullscreenElement);
   const sc=cvs.clientWidth/W,s=G.shake*(REDUCED?.25:1);
   cvs.style.transform=s>.3?`translate(${Math.round(rand(-s,s))*sc}px,${Math.round(rand(-s,s))*sc}px)`:'';
   cvs.style.filter=G.daze>0?`blur(${(G.daze*1.5).toFixed(2)}px) saturate(${(1-G.daze*.6).toFixed(2)})`:'';
@@ -3278,8 +3281,14 @@ function crestURL(ci){if(CRESTS[ci])return CRESTS[ci];const C=CITIES[ci],w=15,h=
   x.putImageData(id,0,0);return CRESTS[ci]=`url('${cv.toDataURL()}')`;}
 // ---------- version and update notes ----------
 // Bump GAME_VERSION and add an entry at the top of CHANGELOG for every update: players see the popup once per version.
-const GAME_VERSION='1.13.1';
+const GAME_VERSION='1.13.3';
 const CHANGELOG=[
+  {v:'1.13.3',date:'28 Oct 2026',title:'Nothing between you and the steel',
+   slides:[{title:'Nothing between you and the steel',text:'The aiming crosshair is gone, and in fullscreen the mouse pointer now hides for the whole bout. It comes back when the bout is decided or when you pause.'}],
+   items:['Removed the crosshair','Pointer hidden during fullscreen bouts']},
+  {v:'1.13.2',date:'28 Oct 2026',title:'Cleaner fights',
+   slides:[{title:'Cleaner fights',text:'The pop-up words during a fight, like Gap found, Parry and Guard broken, are gone. Watch the steel instead.'}],
+   items:['Removed combat pop-up words']},
   {v:'1.13.1',date:'28 Oct 2026',title:'Easier breathing',
    slides:[{title:'Easier breathing',text:'Moving your sword around no longer tires you unless you really swing it. Guard changes and gentle movements are free; only fast swings cost stamina.'}],
    items:['Higher sword speed before stamina starts to drain']},
