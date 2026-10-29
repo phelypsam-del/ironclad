@@ -2306,6 +2306,11 @@ const K2={left:['ArrowLeft'],right:['ArrowRight'],up:['ArrowUp'],down:['ArrowDow
 const GAMEKEYS=new Set([...Object.values(KM).flat(),'KeyW','KeyS','ArrowUp','ArrowDown']);
 const blankC=()=>({left:false,right:false,up:false,down:false,block:false,slash:false,thrust:false,murder:false,dodge:false,kick:false});
 const MOUSE={left:false,leftT:0,lastDown:0,pendLunge:0,noTap:false,over:false,x:160+DX,sx:160,y:100,right:false,act:null,moved:0};
+// during a bout the real pointer is locked in place; the sword point moves by the mouse's motion and stays on screen
+const PL={rel:0,escT:0,touch:false};
+function plLocked(){return document.pointerLockElement===cvs;}
+function grabPointer(){if(PL.touch||G.state!=='fight'||G.paused||plLocked()||!cvs.requestPointerLock)return;try{const r=cvs.requestPointerLock();if(r&&r.catch)r.catch(()=>{});}catch(_){}}
+function dropPointer(){if(plLocked()){PL.rel=1;try{document.exitPointerLock();}catch(_){}}}
 function cpos(e){const r=cvs.getBoundingClientRect();MOUSE.sx=(e.clientX-r.left)/r.width*W;MOUSE.x=MOUSE.sx+CAMX;MOUSE.y=(e.clientY-r.top)/r.height*H;}
 function mouseInto(c){const a=MOUSE.act;if(a&&a.type==='dodge')c.dodge=true;if(a&&a.type==='kick')c.kick=true;}
 function drawReticle(){
@@ -2772,6 +2777,7 @@ function render(){
     FB[i]=pack((r+g*80+r*g*.55)*v,(gg+g*42+gg*g*.25)*v,(b+g*10)*v);}
   if(!REDUCED&&ARENA_KIND!=='throne')for(let k=0;k<70;k++){const sp=150+hash2(k,3)*60,x0=(hash2(k,1)*(W+60)+G.time*-28)%(W+60),y0=(hash2(k,2)*H+G.time*sp)%(H+20)-10;
     const x=((x0%(W+60))+(W+60))%(W+60)-30;for(let j=0;j<4;j++){const X=Math.round(x-j*.35),Y=Math.round(y0-j);if(X>=0&&Y>=0&&X<W&&Y<H){const q=Y*W+X,c=FB[q],a=.1-j*.02;FB[q]=pack((c&255)*(1-a)+170*a,((c>>8)&255)*(1-a)+170*a,((c>>16)&255)*(1-a)+150*a);}}}
+  if(plLocked()&&(G.state!=='fight'||G.paused))dropPointer();
   ctx.putImageData(img,0,0);
   cvs.style.cursor=G.state==='fight'?'none':'';
   // in fullscreen the pointer disappears completely for the whole bout and comes back when it is decided (or when paused)
@@ -2842,7 +2848,7 @@ function hudUpdate(){
 function resetFighters(){setArena(G.state==='fight'&&G.mode==='camp'&&G.camp&&G.camp.lv===14?'throne':'lists',G.camp&&G.camp.ci);STAGE.set(BG);P.length=0;G.f=[mkF(0),mkF(1)];G.slowmo=0;G.attractT=0;updCam(0,true);hudNames();}
 function newBout(){
   $('nextBtn').disabled=false;
-  G.state='fight';G.paused=false;resetFighters();if(G.mode==='camp')applyCampKits();else if(G.mode==='online')netApplyKits();else{applyKit(G.f[0],playerKit());G.f[0].j=skel(G.f[0]);}G.introT=1.4;G.calledFight=false;G.overT=0;
+  G.state='fight';G.paused=false;resetFighters();setTimeout(grabPointer,0);if(G.mode==='camp')applyCampKits();else if(G.mode==='online')netApplyKits();else{applyKit(G.f[0],playerKit());G.f[0].j=skel(G.f[0]);}G.introT=1.4;G.calledFight=false;G.overT=0;
   $('pMenuBtn').textContent=G.mode==='camp'?'Leave fight':'Main menu';
   LOG.length=0;logEl.replaceChildren();
   $('menu').hidden=true;$('over').hidden=true;$('pause').hidden=true;$('stage').classList.remove('inmenu');
@@ -3281,8 +3287,11 @@ function crestURL(ci){if(CRESTS[ci])return CRESTS[ci];const C=CITIES[ci],w=15,h=
   x.putImageData(id,0,0);return CRESTS[ci]=`url('${cv.toDataURL()}')`;}
 // ---------- version and update notes ----------
 // Bump GAME_VERSION and add an entry at the top of CHANGELOG for every update: players see the popup once per version.
-const GAME_VERSION='1.13.3';
+const GAME_VERSION='1.14.0';
 const CHANGELOG=[
+  {v:'1.14.0',date:'28 Oct 2026',title:'A steady hand',
+   slides:[{title:'A steady hand',text:'During a bout your mouse is now locked to the game: the sword follows your hand, but the pointer can no longer slide off the screen. Press Esc to pause and free the mouse; press Resume or click the fight to take it up again. The mouse comes back on its own when the bout is decided.'}],
+   items:['Mouse locked to the game during bouts','Esc pauses the bout and frees the mouse']},
   {v:'1.13.3',date:'28 Oct 2026',title:'Nothing between you and the steel',
    slides:[{title:'Nothing between you and the steel',text:'The aiming crosshair is gone, and in fullscreen the mouse pointer now hides for the whole bout. It comes back when the bout is decided or when you pause.'}],
    items:['Removed the crosshair','Pointer hidden during fullscreen bouts']},
@@ -3870,7 +3879,7 @@ const fitSoon=()=>requestAnimationFrame(()=>{fitAll();requestAnimationFrame(fitA
 function showPanel(id){const was=['pMain','pSet','pHow','pAcct','pMap','pKing','pCity','pShop','pMake','pOnline'].find(k=>$(k)&&!$(k).hidden);if(was&&was!==id){if(id==='pShop')aUI('bell');else aUI('page');}for(const k of ['pMain','pSet','pHow','pAcct','pMap','pKing','pCity','pShop','pMake','pOnline'])$(k).hidden=k!==id;fitSoon();const b=$(id).querySelector('button');if(b)b.focus({preventScroll:true});}
 function ruleSum(){$('ruleSum').textContent='';}
 function toMenu(){G.state='menu';G.paused=false;if(AU.C&&AU.C.state==='suspended')AU.C.resume();$('over').hidden=true;$('pause').hidden=true;$('menu').hidden=false;$('stage').classList.add('inmenu');showPanel(typeof arguments[0]==='string'?arguments[0]:'pMain');resetFighters();}
-function togglePause(){if(G.state!=='fight'||G.mode==='online')return;G.paused=!G.paused;$('pause').hidden=!G.paused;fitSoon();if(G.paused)$('resumeBtn').focus({preventScroll:true});
+function togglePause(){if(G.state!=='fight'||G.mode==='online')return;G.paused=!G.paused;if(G.paused)dropPointer();else grabPointer();$('pause').hidden=!G.paused;fitSoon();if(G.paused)$('resumeBtn').focus({preventScroll:true});
   if(G.paused&&AU.C)AU.C.suspend();else if(AU.C)AU.C.resume();}
 function toggleMute(){AU.on=!AU.on;if(AU.out)AU.out.gain.value=AU.on?.8:0;$('soundTxt').textContent='Sound: '+(AU.on?'on':'off');$('pSoundBtn').textContent='Sound: '+(AU.on?'on':'off');}
 
@@ -3972,21 +3981,25 @@ function wire(){
     document.querySelectorAll('[data-log]').forEach(x=>x.classList.toggle('on',x===b));}));
   $('fsBtn').addEventListener('click',()=>{try{if(document.fullscreenElement)document.exitFullscreen();else{const r=document.documentElement.requestFullscreen?.();if(r&&r.catch)r.catch(()=>{});}}catch(_){}});
   document.addEventListener('fullscreenchange',()=>{$('fsBtn').lastChild.textContent=document.fullscreenElement?'Exit fullscreen':'Fullscreen';});
-  const mm=e=>{cpos(e);MOUSE.over=true;MOUSE.moved=performance.now();if(e.pointerType!=='touch'){MOUSE.right=(e.buttons&2)!==0;MOUSE.left=(e.buttons&1)!==0;}};
-  cvs.addEventListener('pointerdown',e=>{aInit();e.preventDefault();mm(e);try{cvs.setPointerCapture(e.pointerId);}catch(_){}
+  const mm=e=>{if(plLocked()){const r=cvs.getBoundingClientRect();MOUSE.sx=clamp(MOUSE.sx+(e.movementX||0)*W/r.width,0,W-1);MOUSE.y=clamp(MOUSE.y+(e.movementY||0)*H/r.height,0,H-1);MOUSE.x=MOUSE.sx+CAMX;}else cpos(e);MOUSE.over=true;MOUSE.moved=performance.now();if(e.pointerType!=='touch'){MOUSE.right=(e.buttons&2)!==0;MOUSE.left=(e.buttons&1)!==0;}};
+  cvs.addEventListener('pointerdown',e=>{aInit();e.preventDefault();PL.touch=e.pointerType==='touch';if(e.pointerType==='mouse')grabPointer();mm(e);try{cvs.setPointerCapture(e.pointerId);}catch(_){}
     if(e.button===0&&e.pointerType!=='touch'){const n=performance.now();if(n-MOUSE.lastDown<300){MOUSE.act={type:'kick'};MOUSE.pendLunge=0;MOUSE.noTap=true;}else MOUSE.noTap=false;MOUSE.lastDown=n;MOUSE.leftT=n;}});
   cvs.addEventListener('pointermove',mm);
   cvs.addEventListener('pointerup',e=>{mm(e);if(e.pointerType==='touch')MOUSE.over=false;
     else if(e.button===0&&performance.now()-MOUSE.leftT<180&&!(G.f[0]&&(G.f[0].msw.pull||0)>.2)&&!MOUSE.noTap)MOUSE.pendLunge=performance.now();});
   cvs.addEventListener('pointerleave',e=>{if(!(e.buttons&3))MOUSE.over=false;});
   cvs.addEventListener('contextmenu',e=>e.preventDefault());
+  document.addEventListener('pointerlockchange',()=>{if(plLocked())return;if(PL.rel){PL.rel=0;return;}
+    if(G.state==='fight'&&!G.paused&&G.mode!=='online'){PL.escT=performance.now();togglePause();}});
+  // in fullscreen, ask the browser to hand Esc to the game (hold Esc to leave fullscreen)
+  document.addEventListener('fullscreenchange',()=>{try{if(document.fullscreenElement)navigator.keyboard?.lock?.(['Escape']);else navigator.keyboard?.unlock?.();}catch(_){}});
   cvs.addEventListener('wheel',e=>{if(G.state==='fight'){e.preventDefault();MOUSE.act={type:'dodge'};}},{passive:false});
   addEventListener('keydown',e=>{
     if(GAMEKEYS.has(e.code)&&G.state==='fight')e.preventDefault();
     if(e.code==='Escape'&&G.state==='menu'&&$('pMain').hidden){if(!$('pShop').hidden)shopBack();else if(!$('pMake').hidden){if(G.mkFresh)showPanel('pMain');else openMap();}else if(!$('pCity').hidden)openMap();else if(!$('pKing').hidden)openMap();else{showPanel('pMain');ruleSum();}}
     if(e.code==='Enter'&&G.state==='menu'&&$('pMain').hidden){}
     else if(e.code==='Enter'){if(G.state==='menu'&&!(document.activeElement&&document.activeElement.tagName==='BUTTON')){e.preventDefault();startFromMenu();}else if(G.state==='over'){e.preventDefault();overNext();}}
-    if((e.code==='KeyP'||e.code==='Escape')&&G.state==='fight')togglePause();
+    if((e.code==='KeyP'||e.code==='Escape')&&G.state==='fight'&&performance.now()-PL.escT>400)togglePause();
     if(e.code==='KeyM'){aInit();toggleMute();}
     if(!e.repeat)PRESS.add(e.code);DOWN.add(e.code);
   });
