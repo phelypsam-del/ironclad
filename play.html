@@ -101,6 +101,18 @@ canvas{touch-action:none;display:block;width:100%;max-width:100%;aspect-ratio:16
 .log .bad{color:#ff8b7c}.log .good{color:#f5d47c}.log .warn{color:#ffb766}.log .mute{color:#cfc7d6}
 
 .overlay{position:absolute;inset:0;background:rgba(9,7,12,.74);display:flex;align-items:center;justify-content:center;padding:10px;overflow:auto}
+.slotlist{display:flex;flex-direction:column;gap:10px;min-width:min(520px,80vw)}
+.slotrow{display:flex;gap:10px;align-items:center}
+.slotfig{width:132px!important;height:auto!important;max-width:none!important;aspect-ratio:88/104!important;align-self:center;image-rendering:pixelated;border:2px solid #5a3a1c;flex:none;background:#3a2818}
+.slotfig.empty{opacity:.35;filter:grayscale(1)}
+.slotb{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:2px;text-align:left;cursor:pointer;background:linear-gradient(#4a2e18,#2e1c0e);border:3px solid #c9a24a;box-shadow:0 3px 0 #000;color:#f3e3c0;padding:10px 16px;font-family:var(--f-ui);font-size:15px;line-height:1.2;min-height:64px}
+.slotb:hover,.slotb:focus-visible{background:linear-gradient(#5e3c20,#3a2412);border-color:#f0cc6a;outline:none}
+.slotb.cur{border-color:#e05a3a}
+.slotb b{font-family:var(--f-display);font-weight:400;font-size:30px;color:#fff0cf;text-shadow:2px 2px 0 #000}
+.slotb small{font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:#e2c27a}
+.slotdel{align-self:center;background:linear-gradient(#5a1a14,#3a0e0a);border:3px solid #8f1418;box-shadow:0 3px 0 #000;color:#ffd8c8;font-family:var(--f-ui);font-weight:700;font-size:14px;padding:10px 12px;cursor:pointer;min-width:6em}
+.slotdel:hover{filter:brightness(1.2)}
+.slotdel.sure{background:#8f1418;color:#fff0d6;border-color:#5a0a0c}
 .card{background:var(--panel);border:2px solid var(--line);box-shadow:0 0 0 2px #000,6px 6px 0 #000;padding:16px 18px;max-width:440px;width:100%;display:flex;flex-direction:column;gap:10px}
 .card h2{font-family:var(--f-display);font-weight:400;font-size:clamp(26px,4.4vw,40px);line-height:.95;margin:0;text-wrap:balance}
 .eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--or);margin:0}
@@ -585,6 +597,8 @@ body{font-weight:500}
 .mreg.sea{width:auto!important;white-space:nowrap!important;font-style:italic!important;color:#efe6cc!important;opacity:.7}
 .pmap .mapbar{z-index:3}
 
+.mapsaves{position:absolute;left:2.2cqw;top:2cqw;z-index:3;width:max(44px,4.8cqw);height:max(44px,4.8cqw);padding:0!important;display:flex;align-items:center;justify-content:center}
+.tomeicon{display:block;width:72%;aspect-ratio:1;background:var(--tx-tome) center/contain no-repeat;image-rendering:pixelated;filter:drop-shadow(1px 1px 0 #000)}
 .mapzoom{position:absolute;right:2.2cqw;top:2cqw;display:flex;flex-direction:column;gap:.6cqw;z-index:3}
 .mapzoom .pbtn{width:max(40px,4.4cqw);height:max(40px,4.4cqw);padding:0!important;font-family:var(--f-ui)!important;font-weight:700!important;font-size:max(22px,2.6cqw)!important;line-height:1}
 
@@ -714,6 +728,7 @@ body{font-weight:500}
     <div class="pfull pmap" id="pMap" hidden>
       <div class="mapworld" id="mapWorld"><canvas class="mapcv" id="mapCv" width="640" height="360" aria-label="Map of Europe"></canvas>
       <div class="maplabels" id="mapLabels"></div></div>
+      <button class="pbtn mapsaves" id="mapSaves" type="button" title="Saves" aria-label="Saves"><i class="tomeicon"></i></button>
       <div class="mapzoom"><button class="pbtn" id="mapZin" type="button" aria-label="Zoom in">+</button><button class="pbtn" id="mapZout" type="button" aria-label="Zoom out">−</button></div>
       <div class="mapbar">
         <div class="gold" id="mapGold"></div>
@@ -792,6 +807,11 @@ body{font-weight:500}
       </div>
       <p class="fine acctmsg" id="acctMsg" aria-live="polite"></p>
       <div class="row"><button class="go" data-back type="button">Back</button></div>
+    </div>
+    <div class="card" id="pSlots" hidden>
+      <h2>Choose your tale</h2>
+      <div class="slotlist" id="slotList"></div>
+      <div class="row"><button class="go" id="slotBack" type="button">Back</button></div>
     </div>
     <div class="card" id="pSet" hidden>
       <h2>Rules</h2>
@@ -1199,7 +1219,12 @@ function enemyKit(ci,lv){const C=CITIES[ci],t=lv/14;let k=C.kit(t,lv);if(lv===14
 const KINGDOM_LOOK=[{hs:'bascinet',jupon:1,her:'cross',ramp:MANTLE,trim:GULES,jbelt:GOLD},{hs:'klapp',jupon:1,her:'chevron',ramp:AZURE,trim:GOLD,jbelt:GOLD},{hs:'great',crownK:'horns',jupon:1,her:'eagle',her2:SABLE,ramp:GOLD,trim:GOLD,jbelt:SILVER},{hs:'kettle',jupon:1,her:'cross',ramp:MANTLE,trim:SABLE},{hs:'spangen',style:'lamel',ramp:GULES,trim:GULES}];
 const ROYAL_LOOK=[{hs:'bascinet',crownK:'open',tint:GILT,jupon:1,her:'quarter',ramp:AZURE,her2:GULES,trim:GOLD,jbelt:GOLD},{hs:'bascinet',crownK:'open',tint:GILT,jupon:1,her:'seme',ramp:AZURE,trim:GOLD,jbelt:GOLD},{hs:'bascinet',crownK:'imperial',tint:GILT,jupon:1,her:'eagle',her2:SABLE,ramp:GOLD,trim:GOLD,jbelt:GOLD},{hs:'great',crownK:'cross',tint:POLISH,jupon:1,her:'gmcross',ramp:MANTLE,trim:SABLE,jbelt:GOLD},{hs:'spangen',crownK:'kamel',tint:GILT,style:'lamel',ramp:PURPURE,trim:GOLD}];
 function reward(ci,lv){return Math.round([14,26,44,70,110][ci]*(1+lv*.08)*(lv===14?2:1));}
-const SAVEKEY='ironclad-campaign-v1';
+const SLOTKEYS=['ironclad-campaign-v1','ironclad-campaign-v1-s2','ironclad-campaign-v1-s3'];
+let SLOT=0;try{SLOT=Math.min(2,Math.max(0,+(localStorage.getItem('ironclad-slot')||0)||0));}catch(_){}
+let SAVEKEY=SLOTKEYS[SLOT];
+function slotRaw(i){try{const v=localStorage.getItem(SLOTKEYS[i]);return v?JSON.parse(v):null;}catch(_){return null;}}
+function slotUsed(c){return !!(c&&(c.look||(c.beaten||[]).some(n=>n>0)||(c.gold||0)>0));}
+function setSlot(i){SLOT=i;SAVEKEY=SLOTKEYS[i];try{localStorage.setItem('ironclad-slot',String(i));}catch(_){}CAMP=loadCamp();G.foeCache=null;}
 function newCamp(){return {foeSeed:(Math.random()*4294967295)>>>0,gold:0,city:0,beaten:[0,0,0,0,0],helm:'bare',body:'tunic',legs:'hose',weapon:'arming',shield:'none',owned:{bare:1,tunic:1,hose:1,arming:1,none:1},look:null,seen:{},done:false};}
 function loadCamp(){try{const v=localStorage.getItem(SAVEKEY);if(v){const c=Object.assign(newCamp(),JSON.parse(v));if(!JSON.parse(v).foeSeed){try{localStorage.setItem(SAVEKEY,JSON.stringify(c));}catch(_){}}
     if(c.armor){const M={gambeson:['hood','gambeson','hose'],mail:['coif','hauberk','chausses'],munition:['ironhelm','cuirass','irongreaves'],harness:['bascinet','harness','legharness'],gothic:['sallet','gothic','gothiclegs']};
@@ -1224,18 +1249,22 @@ function fbLoad(cb){if(window.firebase&&window.firebase.firestore)return cb(true
   const V='10.12.2',libs=['app','auth','firestore'],srcs=[n=>`https://cdn.jsdelivr.net/npm/firebase@${V}/firebase-${n}-compat.js`,n=>`https://www.gstatic.com/firebasejs/${V}/firebase-${n}-compat.js`];
   const go=(si)=>{let i=0;const next=()=>{if(i>=libs.length)return cb(true);const sc=document.createElement('script');sc.src=srcs[si](libs[i]);sc.onload=()=>{i++;next();};sc.onerror=()=>{if(si+1<srcs.length)go(si+1);else cb(false);};document.head.appendChild(sc);};next();};go(0);}
 function campScore(c){if(!c)return -1;return (c.beaten||[]).reduce((a,b)=>a+b,0)*1000+(c.gold||0)+Object.keys(c.owned||{}).length*5;}
-function applyCloudCamp(obj){try{localStorage.setItem(SAVEKEY,JSON.stringify(obj));}catch(_){}CAMP=loadCamp();ruleSum&&ruleSum();if(RELIC_GIFTS.list){cloudQueue();showRelicGifts();}}
+function bundleScore(sl){return sl.reduce((a,c)=>a+(slotUsed(c)?campScore(c)+1:0),0);}
+function localSlots(){return [0,1,2].map(i=>i===SLOT?JSON.parse(JSON.stringify(CAMP)):slotRaw(i));}
+function packSlots(){const sl=localSlots(),b={...(sl[0]||{})};delete b._s2;delete b._s3;b._s2=sl[1]||null;b._s3=sl[2]||null;return b;}
+function unpackSlots(r){if(!r)return [null,null,null];const a={...r};const s2=a._s2||null,s3=a._s3||null;delete a._s2;delete a._s3;return [slotUsed(a)?a:null,s2,s3];}
+function applyCloudCamp(obj){const sl=unpackSlots(obj),old=!obj||!('_s2' in obj);for(let i=0;i<3;i++){if(old&&i>0)continue;try{if(sl[i])localStorage.setItem(SLOTKEYS[i],JSON.stringify(sl[i]));else localStorage.removeItem(SLOTKEYS[i]);}catch(_){}}CAMP=loadCamp();if(typeof renderSlots==='function'&&!$('pSlots').hidden)renderSlots();ruleSum&&ruleSum();if(RELIC_GIFTS.list){cloudQueue();showRelicGifts();}}
 async function cloudPull(){const u=CLOUD.user;if(!u)return;const ref=CLOUD.db.collection('saves').doc(u.uid);
   try{const snap=await ref.get();let linked=null;try{linked=localStorage.getItem('ironclad-linked-uid');}catch(_){}
     if(snap.exists){let remote=null;try{remote=JSON.parse(snap.data().camp);}catch(_){}
       // the first time a browser links to this account, keep whichever save has more progress; after that the cloud wins
-      if(remote&&(linked===u.uid||campScore(remote)>=campScore(CAMP)))applyCloudCamp(remote);else await cloudPush(true);}
+      if(remote&&(linked===u.uid||bundleScore(unpackSlots(remote))>=bundleScore(localSlots())))applyCloudCamp(remote);else await cloudPush(true);}
     else await cloudPush(true);
     try{localStorage.setItem('ironclad-linked-uid',u.uid);}catch(_){}
     CLOUD.err='';acctRender();}
   catch(e){CLOUD.err='Could not reach your cloud save. Playing offline for now.';acctRender();}}
 async function cloudPush(now){const u=CLOUD.user;if(!u||!CLOUD.db)return;
-  try{CLOUD.busy=true;await CLOUD.db.collection('saves').doc(u.uid).set({camp:JSON.stringify(CAMP),updated:Date.now(),v:GAME_VERSION});CLOUD.last=Date.now();CLOUD.err='';}
+  try{CLOUD.busy=true;await CLOUD.db.collection('saves').doc(u.uid).set({camp:JSON.stringify(packSlots()),updated:Date.now(),v:GAME_VERSION});CLOUD.last=Date.now();CLOUD.err='';}
   catch(e){CLOUD.err='Cloud save failed. Your progress is still saved on this device.';}
   CLOUD.busy=false;acctRender();}
 function cloudQueue(){if(!CLOUD.user)return;clearTimeout(CLOUD.timer);CLOUD.timer=setTimeout(()=>cloudPush(),1500);}
@@ -3164,6 +3193,12 @@ function genUI(){
     for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(!filled(x,y)&&(filled(x-1,y)||filled(x+1,y)||filled(x,y-1)||filled(x,y+1)))P(x,y,INK);
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){const c=buf[y*w+x];if(c!=null)P(x,y,c);}});
   const coin=tex(9,9,(P)=>{for(let y=0;y<9;y++)for(let x=0;x<9;x++){const d=Math.hypot(x-4,y-4);if(d>4.4)continue;P(x,y,d>3.5?C3(110,74,14):(x+y<7?C3(255,232,140):C3(222,170,50)));}P(4,3,C3(150,104,24));P(4,4,C3(150,104,24));P(4,5,C3(150,104,24));});
+  const tome=tex(16,16,(P)=>{const O=C3(30,18,10),L=[C3(70,34,20),C3(104,52,28),C3(138,72,38)],PG=[C3(214,198,160),C3(238,226,194)],B=[C3(150,108,34),C3(222,180,72)];
+    for(let y=2;y<14;y++)for(let x=2;x<13;x++){const e=x===2||y===2||y===13||x===12;P(x,y,e?O:L[x<5?2:x<9?1:0]);}
+    for(let y=3;y<13;y++){P(13,y,PG[(y&1)]);P(14,y,O);}P(13,2,O);P(13,13,O);
+    for(let y=4;y<12;y++)P(4,y,L[0]);for(const [x,y] of [[3,3],[11,3],[3,12],[11,12]])P(x,y,B[1]);for(const [x,y] of [[4,3],[3,4],[10,3],[11,4],[4,12],[3,11],[10,12],[11,11]])P(x,y,B[0]);
+    for(let y=6;y<9;y++)for(let x=6;x<10;x++)P(x,y,(x+y)&1?B[1]:B[0]);P(7,7,O);
+    for(let y=13;y<16;y++)P(9,y,y===15?C3(120,16,20):C3(176,30,34));});
   const seal=tex(12,12,(P)=>{for(let y=0;y<12;y++)for(let x=0;x<12;x++){const d=Math.hypot(x-5.5,y-5),wob=hash2(x,y)*.6;if(d>5+wob)continue;P(x,y,d>4.2?C3(90,10,12):(x+y<9?C3(196,42,36):C3(150,24,22)));}
     for(let k=3;k<8;k++){P(5,k,C3(110,14,14));P(6,k,C3(110,14,14));}for(let k=3;k<9;k++)P(k,5,C3(110,14,14));P(7,11,C3(130,20,18));});
   const icon=(fn)=>tex(13,13,fn),STL=[C3(70,76,90),C3(150,160,176),C3(220,226,236)],GD=[C3(150,104,24),C3(230,184,64)];
@@ -3266,7 +3301,7 @@ function genUI(){
   const R2=document.documentElement.style;
   for(const [k,v] of Object.entries({scrollv:scrollV,scrollh:scrollH,wood:wood(false,false),woodon:wood(true,true),red,iron:iron(false),gold:iron(true),stone,planks,
     'i-camp':iCamp,'i-duel':iDuel,'i-rules':iRules,'i-book':iBook,'i-bell':iBell,'i-flag':iFlag,crestbig:crestBig,board,
-    'sh-open':shOpen,'sh-done':shDone,'sh-next':shNext,'sh-lock':shLock,crown,coin,seal}))R2.setProperty('--tx-'+k,v);
+    'sh-open':shOpen,'sh-done':shDone,'sh-next':shNext,'sh-lock':shLock,crown,coin,seal,tome}))R2.setProperty('--tx-'+k,v);
 }
 function flatMap(T){const Wm=T.water,N=MW*MH,B=new Uint32Array(N);
   const SEA=[C3(118,104,80),C3(111,98,76),C3(125,111,86)],LAND=[C3(138,141,91),C3(133,136,88)],LIP=C3(96,100,64),LIP2=C3(78,82,52),OUT=C3(38,34,26),HALO=C3(131,118,90);
@@ -3287,8 +3322,11 @@ function crestURL(ci){if(CRESTS[ci])return CRESTS[ci];const C=CITIES[ci],w=15,h=
   x.putImageData(id,0,0);return CRESTS[ci]=`url('${cv.toDataURL()}')`;}
 // ---------- version and update notes ----------
 // Bump GAME_VERSION and add an entry at the top of CHANGELOG for every update: players see the popup once per version.
-const GAME_VERSION='1.14.0';
+const GAME_VERSION='1.15.1';
 const CHANGELOG=[
+  {v:'1.15.1',date:'28 Oct 2026',title:'Three tales',
+   slides:[{title:'Three save slots',text:'Keep three different knights on the road at once. On the map, click the book in the top-left corner to see your saves, each with its knight in his own armour. Pick one to carry on, or an empty one to begin a new tale. Your existing campaign is in Save 1, and signed-in players get all three saves in the cloud.'}],
+   items:['Three campaign save slots behind the book on the map','Each save shows its knight in his armour','All three saves sync to your account']},
   {v:'1.14.0',date:'28 Oct 2026',title:'A steady hand',
    slides:[{title:'A steady hand',text:'During a bout your mouse is now locked to the game: the sword follows your hand, but the pointer can no longer slide off the screen. Press Esc to pause and free the mouse; press Resume or click the fight to take it up again. The mouse comes back on its own when the bout is decided.'}],
    items:['Mouse locked to the game during bouts','Esc pauses the bout and frees the mouse']},
@@ -3704,7 +3742,7 @@ function renderMaker(){fitSoon();
 function openMap(){if(G.state!=='menu')toMenu('pMap');else showPanel('pMap');renderMap();}
 function openShop(from){G.shopFrom=from;G.shopSel=null;G.merch=from==='city'||from==='king'?Math.min(G.campCity??CAMP.city,CAMP.city):CAMP.city;THUMBS.clear();showPanel('pShop');renderShop();}
 function shopBack(){if(G.shopFrom==='city')openCity(G.campCity,G.campHold);else if(G.shopFrom==='king')openKing(G.campCity);else if(G.shopFrom==='main'){showPanel('pMain');ruleSum();}else openMap();}
-const PARCH=pack(239,223,182),THBG=pack(33,25,21);
+const PARCH=pack(239,223,182),SLOTBG=pack(58,40,24),THBG=pack(33,25,21);
 const PV={x:100,y:64,w:120,h:100};let ARMB=null,GLA=null,VGN=null;
 function genArmoury(){
   const w=PV.w,h=PV.h,B=new Uint32Array(w*h),set=(x,y,c)=>{if(x>=0&&y>=0&&x<w&&y<h)B[y*w+x]=c;},rect=(x,y,ww,hh,c)=>{for(let j=0;j<hh;j++)for(let i=0;i<ww;i++)set(x+i,y+j,c);};
@@ -3872,11 +3910,44 @@ function fitBox(inner,box){if(!inner||!box||box.hidden||inner.hidden||!inner.get
   const z=Math.min(1,(bh*.97)/h,(bw*.98)/w);if(z<.999)inner.style.zoom=z.toFixed(3);}
 function fitAll(){try{
   fitBox($('pMain'),$('menu'));
-  for(const id of ['pSet','pHow','pOnline'])fitBox($(id),$('menu'));
+  for(const id of ['pSlots','pSet','pHow','pOnline'])fitBox($(id),$('menu'));
   for(const id of ['pKing','pShop','pMake']){const el=$(id);if(el&&!el.hidden)fitBox(el.querySelector('.inner'),el);}
   fitBox($('over').querySelector('.card'),$('over'));fitBox($('pause').querySelector('.card'),$('pause'));}catch(_){}}
 const fitSoon=()=>requestAnimationFrame(()=>{fitAll();requestAnimationFrame(fitAll);});
-function showPanel(id){const was=['pMain','pSet','pHow','pAcct','pMap','pKing','pCity','pShop','pMake','pOnline'].find(k=>$(k)&&!$(k).hidden);if(was&&was!==id){if(id==='pShop')aUI('bell');else aUI('page');}for(const k of ['pMain','pSet','pHow','pAcct','pMap','pKing','pCity','pShop','pMake','pOnline'])$(k).hidden=k!==id;fitSoon();const b=$(id).querySelector('button');if(b)b.focus({preventScroll:true});}
+// three campaign saves: pick one to continue, an empty one to begin a new tale, or delete one (press twice to be sure)
+function renderSlots(){const L=$('slotList');if(!L)return;L.replaceChildren();
+  for(let i=0;i<3;i++){const c=i===SLOT?CAMP:slotRaw(i),used=slotUsed(c),row=document.createElement('div');row.className='slotrow';
+    const fig=document.createElement('canvas');fig.className='slotfig'+(used?'':' empty');try{slotFigure(fig,used?c:null);}catch(_){}row.append(fig);
+    const b=document.createElement('button');b.type='button';b.className='slotb'+(i===SLOT&&used?' cur':'');
+    const t=document.createElement('b'),m=document.createElement('span'),sm=document.createElement('small');
+    sm.textContent=`Save ${i+1}`;t.textContent=used?((c.look&&c.look.name)||'Nameless'):'Empty';m.textContent=used?'':'Start a new tale';
+    b.append(sm,t);if(!used)b.append(m);b.onclick=()=>{if(i!==SLOT){if(SLOT!==i)saveCampQuiet();setSlot(i);}if(!CAMP.look)openMaker(true);else openMap();};row.append(b);
+    if(used){const del=document.createElement('button');del.type='button';del.className='slotdel';del.textContent='Delete';
+      del.onclick=()=>{if(!del.classList.contains('sure')){del.classList.add('sure');del.textContent='Sure?';setTimeout(()=>{if(del.isConnected){del.classList.remove('sure');del.textContent='Delete';}},3000);return;}
+        try{localStorage.removeItem(SLOTKEYS[i]);}catch(_){}if(i===SLOT)CAMP=newCamp();if(typeof cloudQueue==='function')cloudQueue();renderSlots();};row.append(del);}
+    L.append(row);}}
+// draws the knight of a save standing tall with his sword raised, in his own armour and colours, before a castle at dusk
+// (an empty save shows a faded peasant)
+function slotFigure(cv,c){const save=CAMP;let k;try{CAMP=Object.assign(newCamp(),c||{look:defaultLook()});k=playerKit();}finally{CAMP=save;}
+  const f=mkF(0);applyKit(f,k);f.x=160;f.dir=1;f.mouseCtl=false;f.pose={...DEF,lean:-3,crouch:0,hx:8,hy:-12.5,sa:-82,fF:4,fB:-3.5,hk:.3};f.j=skel(f);
+  const X0=118,Y0=52,WD=88,HT=104,R=(k.ramp||GULES),T=(k.trim||GOLD);
+  const img=snapBuf(()=>{
+    for(let y=Y0;y<Y0+HT;y++)for(let x=X0;x<X0+WD;x++){const t=(y-Y0)/HT;const d=BAY[(y&3)*4+(x&3)]/16-.5;
+      // dusk sky, a far ridge, a castle on it, then the trodden field
+      let r=44+t*150+d*8,g=46+t*92+d*8,b=56+t*20+d*6;
+      const ridge=118+Math.sin(x*.21)*2+Math.sin(x*.07+1)*3;
+      const cx=x-X0-17,keep=(cx>=6&&cx<=20&&y>=100)||(cx>=9&&cx<=17&&y>=93)||(cx>=34&&cx<=46&&y>=103)||(cx>=38&&cx<=42&&y>=97)||(cx>=6&&cx<=46&&y>=108);
+      const merlon=(y===93&&(cx===9||cx===11||cx===13||cx===15||cx===17))||(y===97&&(cx===38||cx===40||cx===42))||(y===108&&cx>=20&&cx<=34&&(cx&1));
+      if(keep&&!merlon){r=40;g=38;b=36;if((cx===13&&y>=97&&y<=99)||(cx===40&&y>=100&&y<=101)){r=210;g=150;b=60;}}
+      if(y>ridge){r=46+d*6;g=52+d*6;b=34+d*4;}
+      if(y>=148){const m=(y-148)/8;r=74-m*20+d*10;g=62-m*16+d*8;b=40-m*10+d*6;}
+      FB[y*W+x]=pack(r,g,b);}
+    // the knight's own banners on the towers
+    for(const [bx,by] of [[X0+30,85],[X0+57,90]]){for(let y=by;y<by+8;y++)FB[y*W+bx]=pack(50,40,30);for(let y=0;y<4;y++)for(let x=1;x<5;x++)FB[(by+y)*W+bx+x]=rampAt(x===2?T:R,.6,bx+x,by+y);}
+    shadow(f);drawFighter(f);},X0,Y0,WD,HT,SLOTBG);
+  cv.width=img.width;cv.height=img.height;cv.getContext('2d').putImageData(img,0,0);}
+function saveCampQuiet(){try{localStorage.setItem(SAVEKEY,JSON.stringify(CAMP));}catch(_){}}
+function showPanel(id){const was=['pMain','pSlots','pSet','pHow','pAcct','pMap','pKing','pCity','pShop','pMake','pOnline'].find(k=>$(k)&&!$(k).hidden);if(was&&was!==id){if(id==='pShop')aUI('bell');else aUI('page');}for(const k of ['pMain','pSlots','pSet','pHow','pAcct','pMap','pKing','pCity','pShop','pMake','pOnline'])$(k).hidden=k!==id;fitSoon();const b=$(id).querySelector('button');if(b)b.focus({preventScroll:true});}
 function ruleSum(){$('ruleSum').textContent='';}
 function toMenu(){G.state='menu';G.paused=false;if(AU.C&&AU.C.state==='suspended')AU.C.resume();$('over').hidden=true;$('pause').hidden=true;$('menu').hidden=false;$('stage').classList.add('inmenu');showPanel(typeof arguments[0]==='string'?arguments[0]:'pMain');resetFighters();}
 function togglePause(){if(G.state!=='fight'||G.mode==='online')return;G.paused=!G.paused;if(G.paused)dropPointer();else grabPointer();$('pause').hidden=!G.paused;fitSoon();if(G.paused)$('resumeBtn').focus({preventScroll:true});
@@ -3912,6 +3983,8 @@ function wire(){
   $('nextBtn').addEventListener('click',e=>{e.currentTarget.blur();overNext();});
   $('rulesBtn').addEventListener('click',e=>{e.currentTarget.blur();overBack();});
   $('campBtn').addEventListener('click',()=>{if(!CAMP.look)openMaker(true);else openMap();});
+  $('mapSaves').addEventListener('click',()=>{G.slotFrom='map';showPanel('pSlots');renderSlots();});
+  $('slotBack').addEventListener('click',()=>{if(G.slotFrom==='map'&&CAMP.look)openMap();else{showPanel('pMain');ruleSum();}});
   $('mapLook').addEventListener('click',()=>openMaker(false));
   $('armBtn').addEventListener('click',()=>openShop('main'));
   if(NETCAN())$('onlineBtn').hidden=false;
@@ -3923,7 +3996,7 @@ function wire(){
   $('mkName').addEventListener('input',e=>{DRAFT.name=e.target.value;});
   $('mkName').addEventListener('keydown',e=>e.stopPropagation());
   $('mkRand').addEventListener('click',()=>{const r=randomLook(Math.floor(Math.random()*1e6));Object.assign(DRAFT,r);renderMaker();});
-  $('mkBack').addEventListener('click',()=>{if(G.mkFresh)showPanel('pMain');else openMap();});
+  $('mkBack').addEventListener('click',()=>{if(G.mkFresh){if(G.slotFrom==='map'){showPanel('pSlots');renderSlots();}else showPanel('pMain');}else openMap();});
   $('mkGo').addEventListener('click',()=>{DRAFT.name=(DRAFT.name||'').trim()||'Aldric';CAMP.look={...DRAFT};saveCamp();aInit();if(ok()){aClang(1200,.4,.8,0);}openMap();});
   $('mapBack').addEventListener('click',()=>{showPanel('pMain');ruleSum();});
   $('mapShop').addEventListener('click',()=>openShop('map'));
@@ -3996,7 +4069,7 @@ function wire(){
   cvs.addEventListener('wheel',e=>{if(G.state==='fight'){e.preventDefault();MOUSE.act={type:'dodge'};}},{passive:false});
   addEventListener('keydown',e=>{
     if(GAMEKEYS.has(e.code)&&G.state==='fight')e.preventDefault();
-    if(e.code==='Escape'&&G.state==='menu'&&$('pMain').hidden){if(!$('pShop').hidden)shopBack();else if(!$('pMake').hidden){if(G.mkFresh)showPanel('pMain');else openMap();}else if(!$('pCity').hidden)openMap();else if(!$('pKing').hidden)openMap();else{showPanel('pMain');ruleSum();}}
+    if(e.code==='Escape'&&G.state==='menu'&&$('pMain').hidden){if(!$('pShop').hidden)shopBack();else if(!$('pMake').hidden){if(G.mkFresh){if(G.slotFrom==='map'){showPanel('pSlots');renderSlots();}else showPanel('pMain');}else openMap();}else if(!$('pCity').hidden)openMap();else if(!$('pKing').hidden)openMap();else if(!$('pSlots').hidden&&G.slotFrom==='map'&&CAMP.look)openMap();else{showPanel('pMain');ruleSum();}}
     if(e.code==='Enter'&&G.state==='menu'&&$('pMain').hidden){}
     else if(e.code==='Enter'){if(G.state==='menu'&&!(document.activeElement&&document.activeElement.tagName==='BUTTON')){e.preventDefault();startFromMenu();}else if(G.state==='over'){e.preventDefault();overNext();}}
     if((e.code==='KeyP'||e.code==='Escape')&&G.state==='fight'&&performance.now()-PL.escT>400)togglePause();
