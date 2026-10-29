@@ -106,6 +106,11 @@ canvas{touch-action:none;display:block;width:100%;max-width:100%;aspect-ratio:16
 .go#overShop .newbadge{background:#fff;color:#8f1418;border-color:#fff}
 @keyframes newflash{0%,100%{background-color:#7a1014;box-shadow:0 0 0 0 rgba(224,48,42,0)}50%{background-color:#e0302a;box-shadow:0 0 14px 3px rgba(224,48,42,.7)}}
 @media (prefers-reduced-motion:reduce){.go#overShop{animation:none}}
+.icard.locked canvas{filter:none;background:#120d0b!important}
+.icard.locked .nm2,.icard.locked .pr{opacity:.65}
+.lockico{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%);width:34%;aspect-ratio:12/14;background:var(--tx-lock) center/contain no-repeat;image-rendering:pixelated;filter:drop-shadow(2px 2px 0 #000);pointer-events:none}
+.merch.lockedm{opacity:.7}
+.merch.lockedm::before{content:"";display:inline-block;width:.75em;height:.875em;margin-right:.3em;vertical-align:-.08em;background:var(--tx-lock) center/contain no-repeat;image-rendering:pixelated}
 .newtag{position:absolute;top:4px;right:4px;background:#c0161c;color:#fff;font-family:var(--f-ui);font-weight:800;font-size:11px;letter-spacing:.06em;line-height:1;padding:3px 5px;border:1px solid #5a0508;box-shadow:1px 1px 0 #000;pointer-events:none}
 .newbadge{display:inline-block;margin-left:.35em;min-width:1.35em;padding:0 .3em;background:#c0161c;color:#fff;border:1px solid #5a0508;border-radius:1em;font-family:var(--f-ui);font-weight:800;font-size:12px;line-height:1.45;text-align:center;vertical-align:middle;box-shadow:1px 1px 0 #000;text-shadow:none}
 #armBtn[data-new]:not([data-new=""])::after,#mapShop[data-new]:not([data-new=""])::after,#cityShop[data-new]:not([data-new=""])::after,#kingShop[data-new]:not([data-new=""])::after{content:attr(data-new);display:inline-block;margin-left:.4em;min-width:1.35em;padding:0 .3em;background:#c0161c;color:#fff;border:1px solid #5a0508;border-radius:1em;font-family:var(--f-ui);font-weight:800;font-size:12px;line-height:1.45;text-align:center;vertical-align:middle;box-shadow:1px 1px 0 #000;text-shadow:none}
@@ -1125,6 +1130,11 @@ const MERCHANTS=[
   {city:3,name:'The Abbey Forge',keeper:'Brother Anselm',greet:'Fluted by prayer and hammer. God guide your arm.',stock:['kettlehat','sallet','ordersurcoat','gothic','gothiclegs','harness','estoc','great','sparth','mace','tower','orderlegs','ordershield','masterhelm','masterjupon','masterlegs','mastershield','mastersword']},
   {city:4,name:'The Royal Armourer',keeper:'Master Corvinus of Aurelion',greet:'Only the best for a man who reached the capital alive.',stock:['spangenhelm','blackhelm','crownhelm','lamellar','blackplate','royalplate','blacklegs','gildlegs','daneaxe','great','executioner','tower','byzlegs','varangianshield','kamelaukion','klivanion','emperorlegs','emperorshield','imperialaxe']}
 ];
+// every piece of gear belongs to exactly one kingdom's market: the first market that stocks it keeps it,
+// the starting kit lives in England and each relic in the kingdom it came from
+const HOME={};MERCHANTS.forEach((M,mi)=>{for(const k of M.stock)if(HOME[k]==null)HOME[k]=mi;});
+for(const k of ['bare','tunic','hose','arming','none'])HOME[k]=0;RELICS.forEach(([,k],ci)=>{HOME[k]=ci;});
+MERCHANTS.forEach((M,mi)=>{M.stock=M.stock.filter(k=>HOME[k]===mi);});
 function gearOf(slot,key){return GEAR[slot][key];}
 function slotOfKey(key){for(const [sl] of SLOTS)if(GEAR[sl][key])return sl;return null;}
 function playerKit(over){const k={helm:CAMP.helm,body:CAMP.body,legs:CAMP.legs,weapon:CAMP.weapon,shield:CAMP.shield,...(over||{})};
@@ -3207,6 +3217,10 @@ function genUI(){
     for(let y=4;y<12;y++)P(4,y,L[0]);for(const [x,y] of [[3,3],[11,3],[3,12],[11,12]])P(x,y,B[1]);for(const [x,y] of [[4,3],[3,4],[10,3],[11,4],[4,12],[3,11],[10,12],[11,11]])P(x,y,B[0]);
     for(let y=6;y<9;y++)for(let x=6;x<10;x++)P(x,y,(x+y)&1?B[1]:B[0]);P(7,7,O);
     for(let y=13;y<16;y++)P(9,y,y===15?C3(120,16,20):C3(176,30,34));});
+const lock=tex(12,14,(P)=>{const O=C3(20,14,10),S=[C3(120,124,132),C3(176,180,188),C3(222,226,232)],G2=[C3(150,108,34),C3(204,160,60),C3(240,206,110)];
+    for(let y=1;y<7;y++)for(const x of [2,3,8,9])P(x,y,y===1&&(x===2||x===9)?O:S[x===2||x===8?2:1]);for(let x=3;x<9;x++){P(x,0,O);P(x,1,x<5?S[2]:S[1]);}P(2,0,O);P(9,0,O);
+    for(let y=6;y<14;y++)for(let x=0;x<12;x++){const e=x===0||x===11||y===6||y===13;P(x,y,e?O:G2[x<4?2:x<8?1:0]);}
+    P(5,8,O);P(6,8,O);P(5,9,O);P(6,9,O);P(5,10,O);P(6,10,O);P(5,11,O);});
   const seal=tex(12,12,(P)=>{for(let y=0;y<12;y++)for(let x=0;x<12;x++){const d=Math.hypot(x-5.5,y-5),wob=hash2(x,y)*.6;if(d>5+wob)continue;P(x,y,d>4.2?C3(90,10,12):(x+y<9?C3(196,42,36):C3(150,24,22)));}
     for(let k=3;k<8;k++){P(5,k,C3(110,14,14));P(6,k,C3(110,14,14));}for(let k=3;k<9;k++)P(k,5,C3(110,14,14));P(7,11,C3(130,20,18));});
   const icon=(fn)=>tex(13,13,fn),STL=[C3(70,76,90),C3(150,160,176),C3(220,226,236)],GD=[C3(150,104,24),C3(230,184,64)];
@@ -3309,7 +3323,7 @@ function genUI(){
   const R2=document.documentElement.style;
   for(const [k,v] of Object.entries({scrollv:scrollV,scrollh:scrollH,wood:wood(false,false),woodon:wood(true,true),red,iron:iron(false),gold:iron(true),stone,planks,
     'i-camp':iCamp,'i-duel':iDuel,'i-rules':iRules,'i-book':iBook,'i-bell':iBell,'i-flag':iFlag,crestbig:crestBig,board,
-    'sh-open':shOpen,'sh-done':shDone,'sh-next':shNext,'sh-lock':shLock,crown,coin,seal,tome}))R2.setProperty('--tx-'+k,v);
+    'sh-open':shOpen,'sh-done':shDone,'sh-next':shNext,'sh-lock':shLock,crown,coin,seal,tome,lock}))R2.setProperty('--tx-'+k,v);
 }
 function flatMap(T){const Wm=T.water,N=MW*MH,B=new Uint32Array(N);
   const SEA=[C3(118,104,80),C3(111,98,76),C3(125,111,86)],LAND=[C3(138,141,91),C3(133,136,88)],LIP=C3(96,100,64),LIP2=C3(78,82,52),OUT=C3(38,34,26),HALO=C3(131,118,90);
@@ -3330,8 +3344,14 @@ function crestURL(ci){if(CRESTS[ci])return CRESTS[ci];const C=CITIES[ci],w=15,h=
   x.putImageData(id,0,0);return CRESTS[ci]=`url('${cv.toDataURL()}')`;}
 // ---------- version and update notes ----------
 // Bump GAME_VERSION and add an entry at the top of CHANGELOG for every update: players see the popup once per version.
-const GAME_VERSION='1.16.1';
+const GAME_VERSION='1.17.1';
 const CHANGELOG=[
+  {v:'1.17.1',date:'29 Oct 2026',title:'Every market its own',
+   slides:[{title:'Every market its own',text:'Every kingdom\'s market in the armoury can now be opened, and each piece of gear belongs to just one kingdom: you will only find it in that kingdom\'s market, and gear you own is kept there too. Gear you cannot buy yet is hidden behind a padlock that tells you what unlocks it: freeing that kingdom, or defeating its king.'}],
+   items:['All markets open to browse','Each item sold in only one kingdom','Locked gear hidden behind a padlock']},
+  {v:'1.17.0',date:'29 Oct 2026',title:'See it all',
+   slides:[{title:'See it all',text:'Every kingdom\'s market in the armoury can now be opened. Gear you cannot buy yet sits behind a padlock, hidden until you earn it, and tells you what unlocks it: freeing that kingdom, or defeating its king.'}],
+   items:['All markets open to browse','Locked gear hidden behind a padlock, with what unlocks it']},
   {v:'1.16.1',date:'29 Oct 2026',title:'New gear tracker',
    slides:[{title:'New gear tracker',text:'When a victory unlocks new weapons and armour, a flashing red To armoury button on the victory screen shows how many. The Armoury button also gets a red number, red numbers inside show which kingdom\'s market and which section the new gear is in, and the items themselves are marked NEW until you click on them.'}],
    items:['Flashing To armoury button after victories that unlock gear','Red NEW tags on newly unlocked gear','Counts on the Armoury button, kingdom tabs and sections']},
@@ -3844,41 +3864,45 @@ function newBadges(){const n=CAMP.look?newCounts().total:0;for(const id of ['arm
 function badge(n){const sp=document.createElement('span');sp.className='newbadge';sp.textContent=n;return sp;}
 function renderShop(){fitSoon();
   $('shopGold').innerHTML=goldTxt();
-  if(G.merch==null||G.merch>CAMP.city)G.merch=CAMP.city;
+  if(G.merch==null)G.merch=CAMP.city;
   const M=MERCHANTS[G.merch],mt=$('merchTabs');mt.replaceChildren();
-  MERCHANTS.forEach((m,mi)=>{const b=document.createElement('button');b.type='button';b.className='merch'+(mi===G.merch?' on':'');b.textContent=CITIES[m.city].name;b.disabled=m.city>CAMP.city;{const nc=newCounts().merch.get(m)||0;if(nc&&!b.disabled)b.append(badge(nc));}
-    b.title=b.disabled?`Free ${CITIES[m.city].name} to trade here`:m.name;b.onclick=()=>{G.merch=mi;G.shopSel=null;renderShop();};mt.append(b);});
+  MERCHANTS.forEach((m,mi)=>{const b=document.createElement('button');b.type='button';b.className='merch'+(mi===G.merch?' on':'');b.textContent=CITIES[m.city].name;const mlk=m.city>CAMP.city;if(mlk)b.classList.add('lockedm');{const nc=newCounts().merch.get(m)||0;if(nc&&!mlk)b.append(badge(nc));}
+    b.title=mlk?`Free ${CITIES[m.city].name} to trade here`:m.name;b.onclick=()=>{G.merch=mi;G.shopSel=null;renderShop();};mt.append(b);});
   $('merchName').textContent=M.name;$('merchGreet').textContent=`${M.keeper}: “${M.greet}”`;
   const slot=G.shopTab||'body',cat=GEAR[slot],tabs=$('slotTabs');tabs.replaceChildren();
   for(const [sl,lab] of SLOTS){const t=document.createElement('button');t.type='button';t.className='tab'+(sl===slot?' on':'');t.textContent=lab;{const nc=newCounts().slot.get(M.city+':'+sl)||0;if(nc)t.append(badge(nc));}t.onclick=()=>{G.shopTab=sl;G.shopSel=null;renderShop();};tabs.append(t);}
-  const owned=Object.keys(cat).filter(k=>CAMP.owned[k]),stock=M.stock.filter(k=>cat[k]&&!CAMP.owned[k]&&(cat[k].royal==null||(CAMP.beaten[cat[k].royal]||0)>=15));
+  const owned=Object.keys(cat).filter(k=>CAMP.owned[k]&&(HOME[k]??0)===G.merch),stock=M.stock.filter(k=>cat[k]&&!CAMP.owned[k]);
+  const lockWhy=k=>{if(CAMP.owned[k])return null;if(M.city>CAMP.city)return `Free ${CITIES[M.city].realm} to unlock`;const it2=cat[k];if(it2.royal!=null&&(CAMP.beaten[it2.royal]||0)<15)return `Defeat ${KINGS[it2.royal]} to unlock`;return null;};
   const list=[...owned,...stock].sort((a,b)=>cat[a].price-cat[b].price);
-  if(!G.shopSel||!list.includes(G.shopSel))G.shopSel=list.includes(CAMP[slot])?CAMP[slot]:list[0];
+  if(!G.shopSel||!list.includes(G.shopSel))G.shopSel=list.includes(CAMP[slot])?CAMP[slot]:(list.find(k=>!lockWhy(k))||list[0]);
   const grid=$('shopGrid');grid.replaceChildren();
   for(const key of list){const it=cat[key],own=!!CAMP.owned[key],worn=CAMP[slot]===key;
     const b=document.createElement('button');b.type='button';b.className='icard'+(worn?' worn':own?' own':'')+(G.shopSel===key?' sel':'');b.style.setProperty('--rc','#8a7a5c');
-    const cv=document.createElement('canvas');putThumb(cv,slot,key);
-    const nm=document.createElement('span');nm.className='nm2';nm.textContent=it.name;
+    const lk0=lockWhy(key);const cv=document.createElement('canvas');if(lk0){cv.width=48;cv.height=48;}else putThumb(cv,slot,key);
+    const nm=document.createElement('span');nm.className='nm2';nm.textContent=lk0?'Locked':it.name;
     const pr=document.createElement('span');pr.className='pr';pr.textContent=worn?'Worn':own?'Owned':`${it.price}`;
-    b.append(cv,nm,pr);if(isNewItem(key)){const nw=document.createElement('span');nw.className='newtag';nw.textContent='NEW';b.append(nw);}
+    const lk=lockWhy(key);if(lk){b.classList.add('locked');b.title=lk;pr.textContent='';const li=document.createElement('i');li.className='lockico';b.append(li);}
+    b.append(cv,nm,pr);if(!lk&&isNewItem(key)){const nw=document.createElement('span');nw.className='newtag';nw.textContent='NEW';b.append(nw);}
     b.onclick=()=>{G.shopSel=key;if(isNewItem(key)){CAMP.seenItems[key]=1;saveCamp();}renderShop();newBadges();};grid.append(b);}
   const key=G.shopSel,it=cat[key],own=!!CAMP.owned[key],worn=CAMP[slot]===key,cur=cat[CAMP[slot]];
-  setShowcase(playerKit({[slot]:key}));
+  const hid=!!lockWhy(key);setShowcase(playerKit(hid?{}:{[slot]:key}));
   $('selRar').textContent=SLOTS.find(x=>x[0]===slot)[1].replace(/s$/,'');$('selRar').style.color='';
-  $('selName').textContent=it.name;$('selDesc').textContent=it.desc;
+  $('selName').textContent=hid?'Locked':it.name;$('selDesc').textContent=hid?lockWhy(key)+'.':it.desc;
   const bars=$('selBars');bars.replaceChildren();const cs=statsFor(slot,cur);
-  statsFor(slot,it).forEach(([lab,v,mx,dec,lowGood],n)=>{const l=document.createElement('span');l.textContent=lab;
+  if(!hid)statsFor(slot,it).forEach(([lab,v,mx,dec,lowGood],n)=>{const l=document.createElement('span');l.textContent=lab;
     const bar=document.createElement('span');bar.className='bar2';const fill=document.createElement('i');fill.style.width=Math.min(100,v/mx*100)+'%';const mk2=document.createElement('em');mk2.style.left=Math.min(99,cs[n][1]/mx*100)+'%';bar.append(fill,mk2);
     const dv=document.createElement('span');dv.className='dv';const dlt=v-cs[n][1];
     if(Math.abs(dlt)<1e-6){dv.className+=' eq0';dv.textContent=fmt(v,dec);}else{const good=lowGood?dlt<0:dlt>0;dv.className+=good?' up':' dn';dv.textContent=`${fmt(v,dec)} ${dlt>0?'+':'−'}${fmt(Math.abs(dlt),dec)}`;}
     bars.append(l,bar,dv);});
-  $('selPrice').textContent=worn?'Worn into battle':own?'In your kit':`${it.price} gold`;
+  const lockMsg=lockWhy(key);
+  $('selPrice').textContent=worn?'Worn into battle':own?'In your kit':lockMsg?'':`${it.price} gold`;
   const btn=$('selBuy');btn.disabled=false;
-  if(worn){btn.textContent='Worn';btn.disabled=true;}
+  if(lockMsg){btn.textContent='Locked';btn.disabled=true;}
+  else if(worn){btn.textContent='Worn';btn.disabled=true;}
   else if(own){btn.textContent='Wear it';}
   else if(CAMP.gold<it.price){btn.textContent=`Need ${it.price-CAMP.gold} more`;btn.disabled=true;}
   else btn.textContent='Buy';
-  btn.onclick=()=>{if(worn)return;const bought=!own;if(bought){if(CAMP.gold<it.price)return;if(it.royal!=null&&(CAMP.beaten[it.royal]||0)<15)return;CAMP.gold-=it.price;CAMP.owned[key]=1;aCoins();}else{aClang(slot==='weapon'?1100:520,.5,.8,0);if(slot!=='weapon'&&slot!=='shield')aMail(.5,0);}
+  btn.onclick=()=>{if(worn||lockWhy(key))return;const bought=!own;if(bought){if(CAMP.gold<it.price)return;if(it.royal!=null&&(CAMP.beaten[it.royal]||0)<15)return;CAMP.gold-=it.price;CAMP.owned[key]=1;aCoins();}else{aClang(slot==='weapon'?1100:520,.5,.8,0);if(slot!=='weapon'&&slot!=='shield')aMail(.5,0);}
     CAMP[slot]=key;saveCamp();renderShop();showcaseFx(bought?'Purchased!':'Equipped',bought);};
   const kr=$('kitRow');kr.replaceChildren();
   for(const [sl,lab] of SLOTS){const d=document.createElement('button');d.type='button';d.className='kslot'+(sl===slot?' on':'');const cv=document.createElement('canvas');putThumb(cv,sl,CAMP[sl]);
