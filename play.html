@@ -101,6 +101,14 @@ canvas{touch-action:none;display:block;width:100%;max-width:100%;aspect-ratio:16
 .log .bad{color:#ff8b7c}.log .good{color:#f5d47c}.log .warn{color:#ffb766}.log .mute{color:#cfc7d6}
 
 .overlay{position:absolute;inset:0;background:rgba(9,7,12,.74);display:flex;align-items:center;justify-content:center;padding:10px;overflow:auto}
+.icard,#armBtn,#mapShop,#cityShop,#kingShop,.merch,.tab{position:relative}
+.go#overShop{background:#8f1418!important;color:#fff!important;border-color:#5a0508!important;animation:newflash .9s ease-in-out infinite}
+.go#overShop .newbadge{background:#fff;color:#8f1418;border-color:#fff}
+@keyframes newflash{0%,100%{background-color:#7a1014;box-shadow:0 0 0 0 rgba(224,48,42,0)}50%{background-color:#e0302a;box-shadow:0 0 14px 3px rgba(224,48,42,.7)}}
+@media (prefers-reduced-motion:reduce){.go#overShop{animation:none}}
+.newtag{position:absolute;top:4px;right:4px;background:#c0161c;color:#fff;font-family:var(--f-ui);font-weight:800;font-size:11px;letter-spacing:.06em;line-height:1;padding:3px 5px;border:1px solid #5a0508;box-shadow:1px 1px 0 #000;pointer-events:none}
+.newbadge{display:inline-block;margin-left:.35em;min-width:1.35em;padding:0 .3em;background:#c0161c;color:#fff;border:1px solid #5a0508;border-radius:1em;font-family:var(--f-ui);font-weight:800;font-size:12px;line-height:1.45;text-align:center;vertical-align:middle;box-shadow:1px 1px 0 #000;text-shadow:none}
+#armBtn[data-new]:not([data-new=""])::after,#mapShop[data-new]:not([data-new=""])::after,#cityShop[data-new]:not([data-new=""])::after,#kingShop[data-new]:not([data-new=""])::after{content:attr(data-new);display:inline-block;margin-left:.4em;min-width:1.35em;padding:0 .3em;background:#c0161c;color:#fff;border:1px solid #5a0508;border-radius:1em;font-family:var(--f-ui);font-weight:800;font-size:12px;line-height:1.45;text-align:center;vertical-align:middle;box-shadow:1px 1px 0 #000;text-shadow:none}
 .slotlist{display:flex;flex-direction:column;gap:10px;min-width:min(520px,80vw)}
 .slotrow{display:flex;gap:10px;align-items:center}
 .slotfig{width:132px!important;height:auto!important;max-width:none!important;aspect-ratio:88/104!important;align-self:center;image-rendering:pixelated;border:2px solid #5a3a1c;flex:none;background:#3a2818}
@@ -851,7 +859,7 @@ body{font-weight:500}
       <h2 id="overTitle">Victory</h2>
       <div class="stats" id="overStats"></div>
       <p class="fine" id="overNote"></p>
-      <div class="row"><button class="go" id="nextBtn" type="button">Next bout</button><button class="chip" id="rulesBtn" type="button">Main menu</button></div>
+      <div class="row"><button class="go" id="nextBtn" type="button">Next bout</button><button class="go" id="overShop" type="button" hidden>To armoury</button><button class="chip" id="rulesBtn" type="button">Main menu</button></div>
     </div>
   </div>
 
@@ -3322,8 +3330,14 @@ function crestURL(ci){if(CRESTS[ci])return CRESTS[ci];const C=CITIES[ci],w=15,h=
   x.putImageData(id,0,0);return CRESTS[ci]=`url('${cv.toDataURL()}')`;}
 // ---------- version and update notes ----------
 // Bump GAME_VERSION and add an entry at the top of CHANGELOG for every update: players see the popup once per version.
-const GAME_VERSION='1.15.1';
+const GAME_VERSION='1.16.1';
 const CHANGELOG=[
+  {v:'1.16.1',date:'29 Oct 2026',title:'New gear tracker',
+   slides:[{title:'New gear tracker',text:'When a victory unlocks new weapons and armour, a flashing red To armoury button on the victory screen shows how many. The Armoury button also gets a red number, red numbers inside show which kingdom\'s market and which section the new gear is in, and the items themselves are marked NEW until you click on them.'}],
+   items:['Flashing To armoury button after victories that unlock gear','Red NEW tags on newly unlocked gear','Counts on the Armoury button, kingdom tabs and sections']},
+  {v:'1.15.2',date:'29 Oct 2026',title:'No more rarities',
+   slides:[{title:'No more rarities',text:'Gear no longer has rarity grades or coloured borders. The armoury lists everything by price, cheapest first.'}],
+   items:['Removed item rarity','Armoury sorted by price']},
   {v:'1.15.1',date:'28 Oct 2026',title:'Three tales',
    slides:[{title:'Three save slots',text:'Keep three different knights on the road at once. On the map, click the book in the top-left corner to see your saves, each with its knight in his own armour. Pick one to carry on, or an empty one to begin a new tale. Your existing campaign is in Save 1, and signed-in players get all three saves in the cloud.'}],
    items:['Three campaign save slots behind the book on the map','Each save shows its knight in his armour','All three saves sync to your account']},
@@ -3818,29 +3832,39 @@ function statsFor(slot,it){
   const st=[['Plate',it.plate,175,0],['Mail',it.mail,100,0]];if(slot==='body'&&it.arm!=null)st.push(['Arm plate',it.arm,175,0]);st.push(['Weight',it.wt,7,0,true]);return st;}
 function fmt(v,dec){return dec?(+v).toFixed(2).replace(/0$/,''):Math.round(v);}
 function kitTotals(k){const P=k.plate,avg=Math.round((P.head+P.torso+P.armF+P.legs)/4),w=WEAPONS[k.wpn];return [['Protection',avg],['Weight',k.wt],['Stamina',stamCap(k.wt)],['Damage',w.dmg.toFixed(2)+'×'],['Reach',w.len]];}
+// ---- new-gear tracker: anything that becomes available in a market after you start is flagged NEW until you look at it ----
+function itemSlot(key){for(const [sl] of SLOTS)if(GEAR[sl][key])return sl;return null;}
+function availItems(c){const out=[];for(const M of MERCHANTS){if(M.city>(c.city||0))continue;for(const k of M.stock){const sl=itemSlot(k);if(!sl)continue;const it=GEAR[sl][k];
+    if((c.owned||{})[k])continue;if(it.royal!=null&&((c.beaten||[])[it.royal]||0)<15)continue;out.push([M,sl,k]);}}return out;}
+function seenInit(){if(CAMP.seenItems)return;CAMP.seenItems={};for(const [,,k] of availItems(CAMP))CAMP.seenItems[k]=1;saveCampQuiet();}
+function isNewItem(k){seenInit();return !CAMP.seenItems[k]&&!CAMP.owned[k];}
+function newCounts(){seenInit();const r={total:0,merch:new Map(),slot:new Map()};const seen=new Set();
+  for(const [M,sl,k] of availItems(CAMP)){if(CAMP.seenItems[k])continue;r.merch.set(M,(r.merch.get(M)||0)+1);const sk=M.city+':'+sl;r.slot.set(sk,(r.slot.get(sk)||0)+1);if(!seen.has(k)){seen.add(k);r.total++;}}return r;}
+function newBadges(){const n=CAMP.look?newCounts().total:0;for(const id of ['armBtn','mapShop','cityShop','kingShop']){const b=$(id);if(b)b.dataset.new=n>0?String(n):'';}}
+function badge(n){const sp=document.createElement('span');sp.className='newbadge';sp.textContent=n;return sp;}
 function renderShop(){fitSoon();
   $('shopGold').innerHTML=goldTxt();
   if(G.merch==null||G.merch>CAMP.city)G.merch=CAMP.city;
   const M=MERCHANTS[G.merch],mt=$('merchTabs');mt.replaceChildren();
-  MERCHANTS.forEach((m,mi)=>{const b=document.createElement('button');b.type='button';b.className='merch'+(mi===G.merch?' on':'');b.textContent=CITIES[m.city].name;b.disabled=m.city>CAMP.city;
+  MERCHANTS.forEach((m,mi)=>{const b=document.createElement('button');b.type='button';b.className='merch'+(mi===G.merch?' on':'');b.textContent=CITIES[m.city].name;b.disabled=m.city>CAMP.city;{const nc=newCounts().merch.get(m)||0;if(nc&&!b.disabled)b.append(badge(nc));}
     b.title=b.disabled?`Free ${CITIES[m.city].name} to trade here`:m.name;b.onclick=()=>{G.merch=mi;G.shopSel=null;renderShop();};mt.append(b);});
   $('merchName').textContent=M.name;$('merchGreet').textContent=`${M.keeper}: “${M.greet}”`;
   const slot=G.shopTab||'body',cat=GEAR[slot],tabs=$('slotTabs');tabs.replaceChildren();
-  for(const [sl,lab] of SLOTS){const t=document.createElement('button');t.type='button';t.className='tab'+(sl===slot?' on':'');t.textContent=lab;t.onclick=()=>{G.shopTab=sl;G.shopSel=null;renderShop();};tabs.append(t);}
+  for(const [sl,lab] of SLOTS){const t=document.createElement('button');t.type='button';t.className='tab'+(sl===slot?' on':'');t.textContent=lab;{const nc=newCounts().slot.get(M.city+':'+sl)||0;if(nc)t.append(badge(nc));}t.onclick=()=>{G.shopTab=sl;G.shopSel=null;renderShop();};tabs.append(t);}
   const owned=Object.keys(cat).filter(k=>CAMP.owned[k]),stock=M.stock.filter(k=>cat[k]&&!CAMP.owned[k]&&(cat[k].royal==null||(CAMP.beaten[cat[k].royal]||0)>=15));
-  const list=[...owned,...stock].sort((a,b)=>cat[a].r-cat[b].r||cat[a].price-cat[b].price);
+  const list=[...owned,...stock].sort((a,b)=>cat[a].price-cat[b].price);
   if(!G.shopSel||!list.includes(G.shopSel))G.shopSel=list.includes(CAMP[slot])?CAMP[slot]:list[0];
   const grid=$('shopGrid');grid.replaceChildren();
   for(const key of list){const it=cat[key],own=!!CAMP.owned[key],worn=CAMP[slot]===key;
-    const b=document.createElement('button');b.type='button';b.className='icard'+(worn?' worn':own?' own':'')+(G.shopSel===key?' sel':'');b.style.setProperty('--rc',RARITY[it.r].c);
+    const b=document.createElement('button');b.type='button';b.className='icard'+(worn?' worn':own?' own':'')+(G.shopSel===key?' sel':'');b.style.setProperty('--rc','#8a7a5c');
     const cv=document.createElement('canvas');putThumb(cv,slot,key);
-    const rr=document.createElement('span');rr.className='rr';rr.textContent=RARITY[it.r].n;
     const nm=document.createElement('span');nm.className='nm2';nm.textContent=it.name;
     const pr=document.createElement('span');pr.className='pr';pr.textContent=worn?'Worn':own?'Owned':`${it.price}`;
-    b.append(cv,rr,nm,pr);b.onclick=()=>{G.shopSel=key;renderShop();};grid.append(b);}
+    b.append(cv,nm,pr);if(isNewItem(key)){const nw=document.createElement('span');nw.className='newtag';nw.textContent='NEW';b.append(nw);}
+    b.onclick=()=>{G.shopSel=key;if(isNewItem(key)){CAMP.seenItems[key]=1;saveCamp();}renderShop();newBadges();};grid.append(b);}
   const key=G.shopSel,it=cat[key],own=!!CAMP.owned[key],worn=CAMP[slot]===key,cur=cat[CAMP[slot]];
   setShowcase(playerKit({[slot]:key}));
-  $('selRar').textContent=RARITY[it.r].n+' · '+SLOTS.find(x=>x[0]===slot)[1].replace(/s$/,'');$('selRar').style.color=RARITY[it.r].c;
+  $('selRar').textContent=SLOTS.find(x=>x[0]===slot)[1].replace(/s$/,'');$('selRar').style.color='';
   $('selName').textContent=it.name;$('selDesc').textContent=it.desc;
   const bars=$('selBars');bars.replaceChildren();const cs=statsFor(slot,cur);
   statsFor(slot,it).forEach(([lab,v,mx,dec,lowGood],n)=>{const l=document.createElement('span');l.textContent=lab;
@@ -3862,6 +3886,7 @@ function renderShop(){fitSoon();
   const ks=$('kitSum');ks.replaceChildren();for(const [a,b] of kitTotals(playerKit())){const sp=document.createElement('span');sp.textContent=`${a} ${b}`;ks.append(sp);}
 }
 function showCampOver(){
+  G.preNew=CAMP.look?newCounts().total:0;
   G.state='over';const {ci,lv}=G.camp,C=CITIES[ci],won=G.winner===0;G.lastWon=won;let gold=0,note='';
   if(won){const replay=CAMP.beaten[ci]>lv;gold=replay?Math.max(1,Math.round(reward(ci,lv)*.3)):reward(ci,lv);G.lastReplay=replay;CAMP.gold+=gold;if(CAMP.beaten[ci]<lv+1)CAMP.beaten[ci]=lv+1;
     if(lv===14&&RELICS[ci]){const [rs,rk]=RELICS[ci],it=GEAR[rs][rk];if(!CAMP.owned[rk]){CAMP.owned[rk]=1;G.relicWon=it.name;}}
@@ -3869,7 +3894,8 @@ function showCampOver(){
     else if(lv%5===4)note=`${C.holds[holdOf(lv)].name} is taken. On to ${C.holds[holdOf(lv)+1].name}.`;
     saveCamp();}
   else note='Rest, buy better steel in the armoury, and try again.';
-  aSting(won,won&&lv===14);if(won&&gold>0)setTimeout(aCoins,900);
+  aSting(won,won&&lv===14);
+  {const ob=$('overShop'),gn=won&&CAMP.look?Math.max(0,newCounts().total-G.preNew):0;ob.hidden=!gn;if(gn){ob.textContent='To armoury';ob.append(badge(gn));}}if(won&&gold>0)setTimeout(aCoins,900);
   $('overEyebrow').textContent=`${C.holds[holdOf(lv)].name}, ${C.realm} · fight ${lv%5+1} of 5`;
   $('overTitle').textContent=won?(lv===14&&ci===4?'Long live the champion':lv===14?`${C.realm} is yours`:lv%5===4?`${C.holds[holdOf(lv)].name} is taken`:'Victory'):'Defeat';
   const st=$('overStats');st.replaceChildren();
@@ -3888,7 +3914,7 @@ function showCampOver(){
 function overNext(){aInit();if(G.mode==='online'){if(NET.role==='host'){netSend({t:'start',kits:NET.kits});netBegin();}return;}if(G.mode!=='camp'){G.round++;newBout();return;}const {ci,lv}=G.camp;
   if(!G.lastWon)startCampBout(ci,lv);else if(lv<14)startCampBout(ci,lv+1);else openMap();}
 function overBack(){if(G.mode==='online'){netLeave();toMenu('pOnline');netStatus('You left the duel.');return;}if(G.mode==='camp')openCity(G.camp.ci,G.lastWon?holdOf(Math.min(14,G.camp.lv+1)):holdOf(G.camp.lv));else toMenu();}
-function showOver(){
+function showOver(){$('overShop').hidden=true;
   if(G.mode==='camp')return showCampOver();
   if(G.mode==='online')return netShowOver();
   $('overNote').textContent='';$('nextBtn').textContent='Next bout';$('rulesBtn').textContent='Main menu';
@@ -3947,7 +3973,7 @@ function slotFigure(cv,c){const save=CAMP;let k;try{CAMP=Object.assign(newCamp()
     shadow(f);drawFighter(f);},X0,Y0,WD,HT,SLOTBG);
   cv.width=img.width;cv.height=img.height;cv.getContext('2d').putImageData(img,0,0);}
 function saveCampQuiet(){try{localStorage.setItem(SAVEKEY,JSON.stringify(CAMP));}catch(_){}}
-function showPanel(id){const was=['pMain','pSlots','pSet','pHow','pAcct','pMap','pKing','pCity','pShop','pMake','pOnline'].find(k=>$(k)&&!$(k).hidden);if(was&&was!==id){if(id==='pShop')aUI('bell');else aUI('page');}for(const k of ['pMain','pSlots','pSet','pHow','pAcct','pMap','pKing','pCity','pShop','pMake','pOnline'])$(k).hidden=k!==id;fitSoon();const b=$(id).querySelector('button');if(b)b.focus({preventScroll:true});}
+function showPanel(id){setTimeout(newBadges,0);const was=['pMain','pSlots','pSet','pHow','pAcct','pMap','pKing','pCity','pShop','pMake','pOnline'].find(k=>$(k)&&!$(k).hidden);if(was&&was!==id){if(id==='pShop')aUI('bell');else aUI('page');}for(const k of ['pMain','pSlots','pSet','pHow','pAcct','pMap','pKing','pCity','pShop','pMake','pOnline'])$(k).hidden=k!==id;fitSoon();const b=$(id).querySelector('button');if(b)b.focus({preventScroll:true});}
 function ruleSum(){$('ruleSum').textContent='';}
 function toMenu(){G.state='menu';G.paused=false;if(AU.C&&AU.C.state==='suspended')AU.C.resume();$('over').hidden=true;$('pause').hidden=true;$('menu').hidden=false;$('stage').classList.add('inmenu');showPanel(typeof arguments[0]==='string'?arguments[0]:'pMain');resetFighters();}
 function togglePause(){if(G.state!=='fight'||G.mode==='online')return;G.paused=!G.paused;if(G.paused)dropPointer();else grabPointer();$('pause').hidden=!G.paused;fitSoon();if(G.paused)$('resumeBtn').focus({preventScroll:true});
@@ -3981,6 +4007,7 @@ function wire(){
     document.querySelectorAll('[data-ctl]').forEach(x=>x.classList.toggle('on',x===b));}));
   $('startBtn').addEventListener('click',e=>{e.currentTarget.blur();startFromMenu();});
   $('nextBtn').addEventListener('click',e=>{e.currentTarget.blur();overNext();});
+  $('overShop').addEventListener('click',e=>{e.currentTarget.blur();overBack();openShop('city');});
   $('rulesBtn').addEventListener('click',e=>{e.currentTarget.blur();overBack();});
   $('campBtn').addEventListener('click',()=>{if(!CAMP.look)openMaker(true);else openMap();});
   $('mapSaves').addEventListener('click',()=>{G.slotFrom='map';showPanel('pSlots');renderSlots();});
