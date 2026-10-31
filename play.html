@@ -721,6 +721,10 @@ body{font-weight:500}
 
 .updpop{z-index:30;background:rgba(8,7,4,.58)!important;display:flex;align-items:center;justify-content:center;backdrop-filter:brightness(.7) saturate(.8);-webkit-backdrop-filter:brightness(.7) saturate(.8)}
 .updpop[hidden]{display:none!important}
+.askpop{z-index:40}
+.askcard{max-width:min(460px,92%)!important;text-align:center}
+.askcard p{margin:.2em 0 .6em}
+.askrow{justify-content:center;gap:12px}
 .updcard{max-width:min(980px,90%)!important;min-width:min(720px,90%);width:auto!important;max-height:90%!important;display:flex!important;flex-direction:column;overflow:hidden!important;padding:30px 28px 30px!important}
 .updcard h2{margin:0 0 .3em;font-size:max(26px,3.4cqw)!important}
 .updrow{flex:none}
@@ -783,6 +787,13 @@ body{font-weight:500}
 
   <div class="relictoast" id="relicToast" hidden role="status"></div>
   <div class="newver" id="newVer" hidden role="status"><span id="newVerTxt">A new version of Ironclad Duel is out.</span><button class="go" id="newVerGo" type="button">Refresh now</button><button class="pbtn" id="newVerLater" type="button">Later</button></div>
+  <div class="overlay updpop askpop" id="askPop" hidden>
+    <div class="card askcard" role="dialog" aria-modal="true" aria-labelledby="askTitle">
+      <h2 id="askTitle">Two-handed weapon</h2>
+      <p id="askText"></p>
+      <div class="row askrow"><button class="go" id="askOk" type="button">Remove shield</button><button class="chip" id="askNo" type="button">Cancel</button></div>
+    </div>
+  </div>
   <div class="overlay updpop" id="updPop" hidden>
     <div class="card updcard" role="dialog" aria-modal="true" aria-labelledby="updTitle">
       <p class="eyebrow" id="updEyebrow"></p>
@@ -1207,6 +1218,9 @@ const SHIELDS={
 };
 const SHSC=1.45;for(const k in SHIELDS)if(SHIELDS[k].r2)SHIELDS[k].rad=SHIELDS[k].r2*SHSC;
 GEAR.weapon=WEAPONS;GEAR.shield=SHIELDS;
+// great swords and great axes need both hands: no shield with them
+for(const k of ['great','executioner','broadaxe','daneaxe','sparth','imperialaxe','poitiersaxe'])if(WEAPONS[k])WEAPONS[k].twoH=true;
+const twoHanded=k=>!!(WEAPONS[k]&&WEAPONS[k].twoH);
 const RELICS=[['helm','blackprince'],['weapon','joyeuse'],['helm','galea'],['body','teutonic'],['shield','labarum']];
 const SLOTS=[['helm','Helms'],['body','Armour'],['legs','Legs'],['weapon','Weapons'],['shield','Shields']];
 const MERCHANTS=[
@@ -1223,7 +1237,7 @@ for(const k of ['bare','tunic','hose','arming','none'])HOME[k]=0;RELICS.forEach(
 MERCHANTS.forEach((M,mi)=>{M.stock=M.stock.filter(k=>HOME[k]===mi);});
 function gearOf(slot,key){return GEAR[slot][key];}
 function slotOfKey(key){for(const [sl] of SLOTS)if(GEAR[sl][key])return sl;return null;}
-function playerKit(over){const k={helm:CAMP.helm,body:CAMP.body,legs:CAMP.legs,weapon:CAMP.weapon,shield:CAMP.shield,...(over||{})};
+function playerKit(over){const k={helm:CAMP.helm,body:CAMP.body,legs:CAMP.legs,weapon:CAMP.weapon,shield:CAMP.shield,...(over||{})};if(twoHanded(k.weapon))k.shield='none';
   const H=GEAR.helm[k.helm]||GEAR.helm.hood,B=GEAR.body[k.body]||GEAR.body.gambeson,L=GEAR.legs[k.legs]||GEAR.legs.hose;
   const plate={head:H.plate,legs:L.plate},mail={head:H.mail,legs:L.mail},tint={head:H.tint,legs:L.tint},style={head:H.style,legs:L.style};
   for(const z of ZB){plate[z]=z==='torso'?B.plate:(B.arm??B.plate);mail[z]=B.mail;tint[z]=B.tint;style[z]=B.style;}
@@ -1309,11 +1323,16 @@ function foeName(C,lv,ci){const R=foeRng(ci??CITIES.indexOf(C),lv),pick=a=>a[Mat
   if(lv%5===4)return `${title} ${first}${by}, holder of ${C.holds?C.holds[holdOf(lv)].name:C.name}`;
   return `${title} ${first}${by}`;}
 function enemyKit(ci,lv){const C=CITIES[ci],t=lv/14;let k=C.kit(t,lv);if(lv===14)k={...k,...C.boss};
+  // past France the realms send tougher men: quicker, sharper, harder to break, and better armed
+  if(ci>=2){const e=ci-1,P0=k.prof||{};k.prof={...P0,spd:Math.min(1.25,(P0.spd||.8)+.06*e),react:Math.max(.08,(P0.react||.3)*(1-.15*e)),block:Math.min(.95,(P0.block||.5)+.06*e),
+      smart:Math.min(1,(P0.smart||.6)+.05*e),cool:(P0.cool||[1,1.6]).map(c=>Math.max(.25,c*(1-.12*e)))};k.hp=(k.hp||100)*(1+.1*e);
+    if(lv<14){const heavy=[null,null,{1:'mace',3:'broadaxe'},{1:'sparth',3:'estoc'},{2:'daneaxe',0:'axe'}][ci],w=heavy[lv%4];if(w)k.wpn=w;}}
   const R=foeRng(ci,lv+40),looks=[[{}],[{hs:'open'},{hs:'sallet'},{hs:'open',tint:RUSTY}],[{tint:RUSTY,hs:'open'},{tint:RUSTY,hs:'visor'},{tint:BLACKST,hs:'sallet'},{hs:'visor'}],[{style:'flute',hs:'sallet'},{style:'flute',hs:'visor'},{tint:POLISH,hs:'great'},{tint:BLACKST,hs:'visor'}],[{tint:POLISH,hs:'visor'},{tint:GILT,style:'gilt',hs:'visor'},{tint:POLISH,hs:'great'},{style:'flute',hs:'sallet'}]],
     L=lv===14?{tint:GILT,style:'gilt',hs:'crown'}:looks[ci][Math.floor(R()*looks[ci].length)];
   if(lv===14){const pv=KING_PLATE[ci];if(typeof k.plate!=='object'||!k.plate)k.plate=Math.max(k.plate||0,pv);else{const p={};for(const z of ZK)p[z]=Math.max(kv(k.plate,z),pv);k.plate=p;}k.mail=100;k.scale=1.22;}
   if(L.tint||L.style){k.tint={};k.style={};for(const z of ZK){k.tint[z]=L.tint;k.style[z]=L.style;}}k.hs=L.hs;
   const lk=lv===14?{...KING_LOOK[ci]}:randomLook(((CAMP.foeSeed||1)^Math.imul(ci*131+lv*17+5,2654435761))>>>0);if(ci===0&&lv!==14){k.cloth={};const TN=LOOKS.tunic[lk.tunic].r;for(const z of ZB)k.cloth[z]=TN;k.hood=R()<.35;}
+  if(twoHanded(k.wpn))k.shield='none';
   let ramp=C.ramp,trim=C.trim,ex={};
   if(lv===14){const R2=ROYAL_LOOK[ci];ex={hs:R2.hs,crownK:R2.crownK,jupon:!!R2.jupon,her:R2.her||null,her2:R2.her2||null,jbelt:R2.jbelt||null};ramp=R2.ramp;trim=R2.trim;
     k.tint={};k.style={};for(const z of ZK){k.tint[z]=(z==='torso'||z==='armF'||z==='armB')&&R2.armT?R2.armT:R2.tint;k.style[z]=(z==='torso'||z==='armF'||z==='armB')?R2.style||null:null;}if(R2.legT)k.tint.legs=R2.legT;}
@@ -1406,7 +1425,7 @@ function kitWeight(k){let pl=0,ml=0;for(const z of ZK){pl+=kv(k.plate,z);ml+=kv(
 function stamCap(wt){return Math.round(clamp(100-Math.max(0,(wt||0)-4)*1.6,60,100));}
 function applyKit(f,k){
   for(const zk of ZK){const z=f.zones[zk];z.plate=kv(k.plate,zk);z.mail=kv(k.mail,zk);z.amax=z.plate*.6+z.mail*.4;z.flesh=100;z.tint=(k.tint&&k.tint[zk])||null;z.style=(k.style&&k.style[zk])||null;}
-  f.zones.head.hs=k.hs||'visor';f.her=k.her||null;f.her2=k.her2||null;f.jupon=!!k.jupon;f.crownK=k.crownK||null;f.jbelt=k.jbelt||null;f.wt=k.wt!=null?k.wt:kitWeight(k);f.stMax=stamCap(f.wt);f.st=Math.min(f.st,f.stMax);f.zones.head.hood=!!k.hood;f.zones.head.crest=k.crest||null;f.cross=!!k.cross;
+  f.zones.head.hs=k.hs||'visor';f.her=k.her||null;f.her2=k.her2||null;f.jupon=!!k.jupon;f.crownK=k.crownK||null;f.jbelt=k.jbelt||null;f.wt=k.wt!=null?k.wt:kitWeight(k)*.5;f.stMax=stamCap(f.wt);f.st=Math.min(f.st,f.stMax);f.zones.head.hood=!!k.hood;f.zones.head.crest=k.crest||null;f.cross=!!k.cross;
   for(const zk of ZK)f.zones[zk].cloth=(k.cloth&&k.cloth[zk])||null;
   if(k.look)f.look=resolveLook(k.look);
   f.wpn=WEAPONS[k.wpn||'longsword'];f.shield=k.shield&&k.shield!=='none'?SHIELDS[k.shield]:null;
@@ -2551,6 +2570,7 @@ function aiPlan(me,foe,D,inLine){
     beatin:[{x:2,y:-30,t:.2},{x:BL+12,y:20,t:.12},{x:BL+18,y:ry(Math.random()<.5?chest[1]:thigh[1]),t:.32,lunge:1}],
     beatlow:[{x:BL-4,y:-22,t:.18},{x:BL+12,y:-14,t:.12},{x:far(knee[0]),y:ry(knee[1]),t:.3,lunge:1}]
   };
+  if(me.ai.ripHigh){me.ai.ripHigh=0;const k2=['overhead','quick','headthrust'][Math.random()*3|0];me.ai.lastPlan=k2;return {steps:P[k2],i:0,t:0,kind:k2};}
   if(inLine){const r=Math.random();if(r<.45)return {steps:P.beatin,i:0,t:0,kind:'beatin'};if(r<.7)return {steps:P.beatlow,i:0,t:0,kind:'beatlow'};if(r<.85)return {steps:P.beat,i:0,t:0,kind:'beat'};}
   // pick a target: the weakest-armoured part is likelier, but every line gets used, and not the same move twice running
   const Z=foe.zones,weak=z=>1.2-((z.plate||0)*.7+(z.mail||0)*.3)/100;
@@ -2571,22 +2591,23 @@ function aiAdv(f){let a=0;for(const k of ZK)a+=limbCond(f.zones[k]);return f.hp/
 function aiBrain(me,foe,dt){
   const c=blankC(),ai=me.ai,D=me.prof||DIFF[G.diff],vc=me.vc,d=me.dir,sh=me.j.shF;vc.act=null;
   const dist=Math.abs(foe.x-me.x),tw=foe.x>me.x?'right':'left',aw=tw==='right'?'left':'right';
-  let tx=(me.wpn?me.wpn.len:26)+4,ty=(me.id?-12:4)+Math.sin(G.time*1.7+me.id*2)*3;vc.left=false;vc.right=false;
+  let tx=(me.wpn?me.wpn.len:26)+4,ty=(me.id?-12:4)+Math.sin(G.time*1.7+me.id*2)*3+16*(ai.lowBias||0);vc.left=false;vc.right=false;
   const apply=()=>{vc.x=sh[0]+d*tx;vc.y=sh[1]+ty;vc.over=true;};
   if(G.introT>0||me.dead||foe.dead||me.state==='exhausted'){ai.sw=null;apply();return c;}
   if((me.pushed||0)>45&&ai.sw&&ai.sw.i>0){ai.sw=null;ai.cool=Math.max(ai.cool,.3);}
-  ai.bindT=G.binding?(ai.bindT||0)+dt:0;ai.idleT=ai.sw?0:(ai.idleT||0)+dt;
+  ai.bindT=G.binding?(ai.bindT||0)+dt:0;ai.shTurtle=foe.shield&&foe.shMode?Math.min(2,(ai.shTurtle||0)+dt):Math.max(0,(ai.shTurtle||0)-dt*.5);ai.idleT=ai.sw?0:(ai.idleT||0)+dt;
   if(ai.retreat>0){ai.retreat-=dt;c[aw]=true;tx=(me.wpn?me.wpn.len:26)+2;ty=6;apply();return c;}
   if(ai.bindT>1.1){ai.bindT=0;if(dist<33&&me.st>15&&Math.random()<.45){c.kick=true;ai.cool=.25;apply();return c;}ai.retreat=rand(.35,.7);ai.cool=0;ai.sw=null;apply();return c;}
   if(ai.idleT>3){ai.idleT=0;ai.cool=0;}
   // defence: read an incoming fast blade
   // defence: read an incoming blade early, judge whether it is coming high, middle or low, and cover that line
   const tipDx=Math.abs(foe.j.tip[0]-me.x),closing=tipDx<(ai.lastTipDx??99)+.5;ai.lastTipDx=tipDx;
+  {const LZ=me.zones.legs,lh=(LZ.flesh||0)+(LZ.plate||0)+(LZ.mail||0);if(ai.legH!=null&&lh<ai.legH-.5)ai.lowBias=Math.min(1,(ai.lowBias||0)+.35*(.5+D.smart*.5));ai.legH=lh;ai.lowBias=Math.max(0,(ai.lowBias||0)-dt*.03);}
   // getting hit makes a man angry; having just parried makes him want to answer
   if(ai.lastHp!=null&&me.hp<ai.lastHp-.4){ai.angry=1.5;ai.cool=Math.min(ai.cool,.12);}ai.lastHp=me.hp;if(ai.angry>0)ai.angry-=dt;if(ai.ripT>0)ai.ripT-=dt;
   const threat=!foe.swordDropped&&foe.tipV>130&&tipDx<48&&closing&&!(ai.ripT>0&&foe.tipV<320)&&!(ai.sw&&ai.sw.i>=1);
   const tipY=foe.j.tip[1],line=tipY>me.j.hip[1]-3?'low':tipY<sh[1]-4?'high':'mid';
-  if(threat){if(ai.thT===undefined||ai.thT<0){ai.thT=0;ai.thNeed=D.react*rand(.55,1.05);ai.thBlock=Math.random()<Math.min(.95,D.block+.22+(line==='low'?.15:0));ai.thLine=line;}ai.thT+=dt;
+  if(threat){if(ai.thT===undefined||ai.thT<0){const lb=line==='low'?(ai.lowBias||0):0;if(line==='low')ai.lowBias=Math.min(1,(ai.lowBias||0)+.12*D.smart);ai.thT=0;ai.thNeed=D.react*rand(.55,1.05)*(1-.45*lb);ai.thBlock=Math.random()<Math.min(.97,D.block+.22+(line==='low'?.15+.25*lb:0));ai.thLine=line;}ai.thT+=dt;
     if(ai.thT>=ai.thNeed&&ai.thBlock){ai.defend=.5;ai.defLine=line;if(ai.sw&&ai.sw.i<=1)ai.sw=null;}}
   else if(ai.thT!==undefined)ai.thT-=dt*2;
   me.shTgt=threat||ai.defend>0?clamp(foe.j.tip[1]-sh[1]-5,-13,10):0;
@@ -2594,7 +2615,7 @@ function aiBrain(me,foe,dt){
     if(L==='low'){tx=BLd*.42;ty=27;if(ai.defend>.35&&Math.random()<.5&&!((aw==='left'&&me.x<44)||(aw==='right'&&me.x>WW-44)))c[aw]=true;}
     else if(L==='high'){tx=BLd*.5;ty=-25;}
     else{const m=foe.j.mid;tx=(m[0]-sh[0])*d;ty=m[1]-sh[1];}
-    if(ai.defend<=dt){ai.cool=0;ai.ripT=.75;}
+    if(ai.defend<=dt){ai.cool=0;ai.ripT=.75;if(L==='low')ai.ripHigh=1;}
     apply();return c;}
   ai.cool-=dt;
   const inLine=!foe.swordDropped&&foe.tipV<120&&foe.j.dirB[0]*foe.dir>.6&&Math.abs(foe.j.tip[0]-me.x)<30;
@@ -2629,7 +2650,7 @@ function aiBrain(me,foe,dt){
   if(inLine&&dist<D.pref+32)canAtk=true;
   if(ai.stallT>1.6&&dist<D.pref+40){canAtk=true;ai.cool=Math.min(ai.cool,0);ai.stallT=0;}
   if((!tired||dist<=D.pref)&&ai.cool<=0&&canAtk&&(me.state==='idle'||me.state==='walk')){
-    if(dist<30&&Math.random()<.18){c.kick=true;ai.cool=rand(D.cool[0],D.cool[1]);}
+    if(dist<30&&Math.random()<(foe.shield&&(foe.shMode||foe.shVel>0||ai.shTurtle>.6)?.2+.3*D.smart:.18)){c.kick=true;ai.cool=rand(D.cool[0],D.cool[1]);}
     else{ai.sw=aiPlan(me,foe,D,inLine);ai.ripT=0;if(Math.random()<.18)aWarCry(me,panOf(me.x));}
   }
   apply();return c;
@@ -2732,7 +2753,7 @@ function swordPhysics(f,o,dt){
       if(zk){
         // his blade in the way? check the path from the hand to the contact point, and the path the contact point swept this frame
         if(o.j.shc){const hand=lerp2(f.pb?f.pb[0]:a,cb[0],s),rs=segDist(hand,pt,o.j.shT,o.j.shB2);
-          if(rs.d<o.j.shR){f.swCool=.3;const pn=panOf(o.x);sparks(rs.p[0],rs.p[1],o.shield.kind==='buckler'?10:4,f.dir,.8);
+          if(rs.d<o.j.shR){f.swCool=.3;const pn=panOf(o.x);{const hv=f.wpn&&(f.wpn.kind==='axe'||f.wpn.kind==='mace')?1.6:1,pw=Math.min(1.6,spd/380)*hv*Math.max(.7,((f.wpn&&f.wpn.wt)||2)/2.5);o.st=Math.max(0,o.st-(4+9*pw));o.vx+=f.dir*(20+30*pw);if(o.st<12&&o.state!=='exhausted'&&o.state!=='stagger'){o.state='stagger';o.stagT=.45;}}sparks(rs.p[0],rs.p[1],o.shield.kind==='buckler'?10:4,f.dir,.8);
             if(o.shield.kind==='buckler')aClang(rand(700,950),.6,.8,pn);else{aThud(.6,pn);if(ok())nz(now(),.08,'bandpass',600,1.5,.3,.002,pn);}
             if(G.time-(o.blkLogT||0)>1.2){o.blkLogT=G.time;log(`${o.name} catches it on his ${o.shield.kind==='buckler'?'buckler':'shield'}.`,'mute');}return;}}
         if(!o.swordDropped&&op&&oc){const o1=lerp2(op[2],oc[2],s),o2=lerp2(op[1],oc[1],s),hand=lerp2(f.pb?f.pb[0]:a,cb[0],s);
@@ -3475,8 +3496,14 @@ function crestURL(ci){if(CRESTS[ci])return CRESTS[ci];const C=CITIES[ci],w=15,h=
   x.putImageData(id,0,0);return CRESTS[ci]=`url('${cv.toDataURL()}')`;}
 // ---------- version and update notes ----------
 // Bump GAME_VERSION and add an entry at the top of CHANGELOG for every update: players see the popup once per version.
-const GAME_VERSION='1.18.3';
+const GAME_VERSION='1.19.3';
 const CHANGELOG=[
+  {v:'1.19.3',date:'30 Oct 2026',title:'Both hands',
+   slides:[{title:'Both hands',text:'Two-handed weapons now need both hands: the Greatsword, Executioner\'s blade, Broad axe, Dane axe, Sparth axe and the royal great axes cannot be used with a shield. Taking one up asks whether to remove your shield first, and the armoury marks them Two-handed. Your foes follow the same rule.'}],
+   items:['No shields with two-handed weapons','Asks before removing your shield']},
+  {v:'1.19.1',date:'30 Oct 2026',title:'Harder roads',
+   slides:[{title:'Wiser foes',text:'Your opponents now learn. Hunt a man\'s legs and he starts guarding low, reacts faster to low blows and answers with a cut to your head. Hide behind a shield and he will kick it, and every blow your shield catches costs you breath and ground: axes and maces hammer a shield hardest, and an exhausted shield-bearer is knocked off balance.'},{title:'Harder roads',text:'Once France falls, the road gets much harder. The fighters of the Empire, the Teutonic Order and Byzantium are quicker, read your attacks sooner, block more, wait less between blows, take more punishment and carry heavier weapons.'}],
+   items:['Foes adapt to leg attacks and answer high','Shield blocks cost stamina; turtles get kicked','Tougher foes after France']},
   {v:'1.18.3',date:'30 Oct 2026',title:'Straight in',
    slides:[{title:'Straight in',text:'The Hammerfall Games intro now plays by itself as soon as the game opens, and the hammer now rings on the anvil like real steel. Click or press any key to skip it.'}],
    items:['Studio intro plays automatically','Realistic hammer and anvil sound']},
@@ -4008,6 +4035,9 @@ function newCounts(){seenInit();const r={total:0,merch:new Map(),slot:new Map()}
   for(const [M,sl,k] of availItems(CAMP)){if(CAMP.seenItems[k])continue;r.merch.set(M,(r.merch.get(M)||0)+1);const sk=M.city+':'+sl;r.slot.set(sk,(r.slot.get(sk)||0)+1);if(!seen.has(k)){seen.add(k);r.total++;}}return r;}
 function newBadges(){const n=CAMP.look?newCounts().total:0;for(const id of ['armBtn','mapShop','cityShop','kingShop']){const b=$(id);if(b)b.dataset.new=n>0?String(n):'';}}
 function badge(n){const sp=document.createElement('span');sp.className='newbadge';sp.textContent=n;return sp;}
+// a small yes/no question in the game's own style
+function askConfirm(title,text,okLabel,onOk){const P=$('askPop');$('askTitle').textContent=title;$('askText').textContent=text;$('askOk').textContent=okLabel;P.hidden=false;
+  const close=()=>{P.hidden=true;$('askOk').onclick=null;$('askNo').onclick=null;};$('askOk').onclick=()=>{close();onOk();};$('askNo').onclick=close;setTimeout(()=>$('askOk').focus({preventScroll:true}),0);}
 function renderShop(){fitSoon();
   $('shopGold').innerHTML=goldTxt();
   if(G.merch==null)G.merch=CAMP.city;
@@ -4032,7 +4062,7 @@ function renderShop(){fitSoon();
     b.onclick=()=>{G.shopSel=key;if(isNewItem(key)){CAMP.seenItems[key]=1;saveCamp();}renderShop();newBadges();};grid.append(b);}
   const key=G.shopSel,it=cat[key],own=!!CAMP.owned[key],worn=CAMP[slot]===key,cur=cat[CAMP[slot]];
   const hid=!!lockWhy(key);setShowcase(playerKit(hid?{}:{[slot]:key}));
-  $('selRar').textContent=SLOTS.find(x=>x[0]===slot)[1].replace(/s$/,'');$('selRar').style.color='';
+  $('selRar').textContent=SLOTS.find(x=>x[0]===slot)[1].replace(/s$/,'')+(slot==='weapon'&&it.twoH&&!hid?' · Two-handed':'');$('selRar').style.color='';
   $('selName').textContent=hid?'Locked':it.name;$('selDesc').textContent=hid?lockWhy(key)+'.':it.desc;
   const bars=$('selBars');bars.replaceChildren();const cs=statsFor(slot,cur);
   if(!hid)statsFor(slot,it).forEach(([lab,v,mx,dec,lowGood],n)=>{const l=document.createElement('span');l.textContent=lab;
@@ -4045,11 +4075,16 @@ function renderShop(){fitSoon();
   const btn=$('selBuy');btn.disabled=false;
   if(lockMsg){btn.textContent='Locked';btn.disabled=true;}
   else if(worn){btn.textContent='Worn';btn.disabled=true;}
+  else if(own&&slot==='shield'&&key!=='none'&&twoHanded(CAMP.weapon)){btn.textContent='Two-handed weapon in hand';btn.disabled=true;}
   else if(own){btn.textContent='Wear it';}
   else if(CAMP.gold<it.price){btn.textContent=`Need ${it.price-CAMP.gold} more`;btn.disabled=true;}
   else btn.textContent='Buy';
-  btn.onclick=()=>{if(worn||lockWhy(key))return;const bought=!own;if(bought){if(CAMP.gold<it.price)return;if(it.royal!=null&&(CAMP.beaten[it.royal]||0)<15)return;CAMP.gold-=it.price;CAMP.owned[key]=1;aCoins();}else{aClang(slot==='weapon'?1100:520,.5,.8,0);if(slot!=='weapon'&&slot!=='shield')aMail(.5,0);}
-    CAMP[slot]=key;saveCamp();renderShop();showcaseFx(bought?'Purchased!':'Equipped',bought);};
+  const doBuy=()=>{const bought=!own;if(bought){if(CAMP.gold<it.price)return;if(it.royal!=null&&(CAMP.beaten[it.royal]||0)<15)return;CAMP.gold-=it.price;CAMP.owned[key]=1;aCoins();}else{aClang(slot==='weapon'?1100:520,.5,.8,0);if(slot!=='weapon'&&slot!=='shield')aMail(.5,0);}
+    let note='';if(slot==='shield'&&key!=='none'&&twoHanded(CAMP.weapon)){saveCamp();renderShop();showcaseFx('Purchased!',true);return;}
+    CAMP[slot]=key;if(slot==='weapon'&&twoHanded(key)&&CAMP.shield!=='none'){CAMP.shield='none';note=' · shield removed';}saveCamp();renderShop();showcaseFx((bought?'Purchased!':'Equipped')+note,bought);};
+  btn.onclick=()=>{if(worn||lockWhy(key))return;
+    if(slot==='weapon'&&twoHanded(key)&&CAMP.shield&&CAMP.shield!=='none'){const sh=GEAR.shield[CAMP.shield].name;askConfirm('Two-handed weapon',`The ${it.name} needs both hands. Remove your ${sh} to ${own?'wield':'buy and wield'} it?`,'Remove shield',doBuy);return;}
+    doBuy();};
   const kr=$('kitRow');kr.replaceChildren();
   for(const [sl,lab] of SLOTS){const d=document.createElement('button');d.type='button';d.className='kslot'+(sl===slot?' on':'');const cv=document.createElement('canvas');putThumb(cv,sl,CAMP[sl]);
     const t=document.createElement('span');t.textContent=lab.replace(/s$/,'');d.title=GEAR[sl][CAMP[sl]].name;d.append(cv,t);d.onclick=()=>{G.shopTab=sl;G.shopSel=null;renderShop();};kr.append(d);}
@@ -4266,6 +4301,7 @@ function wire(){
   cvs.addEventListener('wheel',e=>{if(G.state==='fight'){e.preventDefault();MOUSE.act={type:'dodge'};}},{passive:false});
   addEventListener('keydown',e=>{
     if(GAMEKEYS.has(e.code)&&G.state==='fight')e.preventDefault();
+    if(e.code==='Escape'&&!$('askPop').hidden){$('askNo').click();return;}
     if(e.code==='Escape'&&G.state==='menu'&&$('pMain').hidden){if(!$('pShop').hidden)shopBack();else if(!$('pMake').hidden){if(G.mkFresh){if(G.slotFrom==='map'){showPanel('pSlots');renderSlots();}else showPanel('pMain');}else openMap();}else if(!$('pCity').hidden)openMap();else if(!$('pKing').hidden)openMap();else if(!$('pSlots').hidden&&G.slotFrom==='map'&&CAMP.look)openMap();else{showPanel('pMain');ruleSum();}}
     if(e.code==='Enter'&&G.state==='menu'&&$('pMain').hidden){}
     else if(e.code==='Enter'){if(G.state==='menu'&&!(document.activeElement&&document.activeElement.tagName==='BUTTON')){e.preventDefault();startFromMenu();}else if(G.state==='over'){e.preventDefault();overNext();}}
