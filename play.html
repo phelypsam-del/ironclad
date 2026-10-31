@@ -779,7 +779,7 @@ body{font-weight:500}
   <canvas id="scr" width="320" height="180" aria-label="Arena"></canvas>
   <div class="ohud">
     <div class="op" id="hud0"></div>
-    <div class="omid"><div class="score" id="score">0 · 0</div><div class="round" id="roundLbl">Bout 1</div><button class="picon" id="pauseIcon" type="button" aria-label="Pause">II</button></div>
+    <div class="omid"><div class="score" id="score">0 · 0</div><div class="round" id="roundLbl">Bout 1</div></div>
     <div class="op r" id="hud1"></div>
   </div>
   <div class="callout" id="callout"></div>
@@ -1209,7 +1209,7 @@ const WEAPONS={
   englishbill:{name:'English bill',r:3,req:20,price:1100,len:33,dmg:1.25,spd:.86,thrust:1.1,ap:1.5,wt:4,kind:'bill',desc:'A billhook on a long ash haft, with a hooked blade, a back spike and a top spike. A favourite of the English foot soldier. Long reach; the hook catches blades.'},
   warhammer:{name:'War hammer',r:3,req:20,price:1250,len:24,dmg:1.1,spd:.96,thrust:.5,ap:2,wt:2,kind:'hammer',desc:'A hammer face, a beak and a top spike on a short haft, made to dent and pierce plate.'},
   morningstar:{name:'Morning star',r:3,req:20,price:1400,len:24,dmg:1.25,spd:.9,thrust:.3,ap:1.9,wt:3,kind:'morning',desc:'The German Morgenstern: a spiked iron ball on a stout haft. Crushes helms and bursts mail.'},
-  warflail:{name:'War flail',r:3,req:20,price:1550,len:23,dmg:1.3,spd:.84,thrust:.1,ap:1.6,wt:3,kind:'flail',desc:'A spiked ball on a chain that swings round a shield and over a guard. Hard to block, hard to control.'},
+  warflail:{name:'War flail',r:3,req:20,price:1550,len:23,dmg:1.3,spd:.84,thrust:.1,ap:1.6,wt:3,kind:'flail',desc:'A spiked ball on a chain. Swing the haft and the ball trails behind, then whips round: the faster it flies, the harder it lands. Hard to control.'},
   paramerion:{name:'Paramerion',r:3,req:20,price:1700,len:27,dmg:1.15,spd:1.12,thrust:.6,wt:2,kind:'saber',gilt:true,desc:'The curved, single-edged sabre of the Byzantine cavalry, with a gilded hilt. Fast, slicing cuts; weak thrusts.'},
   estoc:{name:'Estoc',r:2,price:520,len:28,dmg:.8,spd:1,thrust:1.6,gap:.15,wt:2,desc:'A stiff steel spike made for the gaps in plate.'},
   bastard:{name:'Bastard sword',r:2,price:560,len:28,dmg:1.15,spd:.95,thrust:1,wt:2,desc:'Longer and heavier. Bites deep.'},
@@ -2145,6 +2145,7 @@ function drawAxeHead(buf,T,dB,sg,H,blood){const pxv=-dB[1],pyv=dB[0],R=Math.ceil
     if(toEdge<1.15)c=STEEL[6];else if(rim)c=STEEL[1];else if(b<1.5&&Math.abs(a)<1.8)c=STEEL[2];else c=STEEL[(toEdge<2.3)?5:((Math.floor(a)+Math.floor(b))&1)?4:3];
     if(blood>2&&toEdge<1.6&&hash2(X*3,Y*5)<.6)c=BLOOD[2];
     pset(buf,X,Y,c);}}
+let FLAIL_CUR=null;const FLAIL_L=8;
 function drawHafted(buf,G0,dB,blood,trim,len,kind){
   const pxv=-dB[1],pyv=dB[0],sg=pyv>=0?1:-1;
   for(let kk=-6;kk<=len-2;kk+=0.5){const x=G0[0]+dB[0]*kk,y=G0[1]+dB[1]*kk;pset(buf,x,y,kk<0?LEATHER[(Math.floor(kk*1.5)&1)?1:2]:WOOD[(Math.floor(kk)%5===0)?1:2]);}
@@ -2157,6 +2158,10 @@ function drawHafted(buf,G0,dB,blood,trim,len,kind){
       for(let a=2;a<=4.5;a+=.5)P2(a,0,a>4?STEEL[6]:STEEL[4]);}
     else if(kind==='morning'){const cA=1.5;for(let a=-2.4;a<=2.4;a+=.5)for(let b=-2.4;b<=2.4;b+=.5){const r=Math.hypot(a,b);if(r<=2.4)P2(cA+a,b,r>1.8?STEEL[2]:(a+b<0?STEEL[5]:STEEL[4]));}
       for(let k=0;k<8;k++){const an=k*Math.PI/4;for(let t=2.5;t<=4;t+=.5)P2(cA+Math.cos(an)*t,Math.sin(an)*t,t>3.5?STEEL[6]:STEEL[4]);}}
+    else if(kind==='flail'&&FLAIL_CUR){const a0=[T[0]+dB[0]*2,T[1]+dB[1]*2],b=FLAIL_CUR,dx=b.x-a0[0],dy=b.y-a0[1],D=Math.hypot(dx,dy),sag=Math.max(0,FLAIL_L-D)*.5;
+      for(let t=0;t<=1;t+=1/12){const x=a0[0]+dx*t,y=a0[1]+dy*t+Math.sin(Math.PI*t)*sag;pset(buf,x,y,(Math.round(t*12)&1)?STEEL[3]:STEEL[5]);}
+      for(let a=-2;a<=2;a+=.5)for(let c=-2;c<=2;c+=.5){const r=Math.hypot(a,c);if(r<=2)pset(buf,b.x+a,b.y+c,r>1.4?STEEL[2]:(a+c<0?STEEL[5]:STEEL[4]));}
+      for(let k2=0;k2<8;k2++){const an=k2*Math.PI/4;pset(buf,b.x+Math.cos(an)*3,b.y+Math.sin(an)*3,blood>2&&k2%2?BLOOD[2]:STEEL[6]);}}
     else if(kind==='flail'){let cx=T[0]+dB[0]*2,cy=T[1]+dB[1]*2;const sw=Math.sin(G.time*3)*.35;for(let t=0;t<6;t+=.5){cx+=dB[0]*.25+sw*.15;cy+=.45;pset(buf,cx,cy,(t*2)%2?STEEL[3]:STEEL[5]);}
       for(let a=-2;a<=2;a+=.5)for(let b=-2;b<=2;b+=.5){const r=Math.hypot(a,b);if(r<=2)pset(buf,cx+a,cy+2+b,r>1.4?STEEL[2]:(a+b<0?STEEL[5]:STEEL[4]));}
       for(let k=0;k<8;k++){const an=k*Math.PI/4;pset(buf,cx+Math.cos(an)*3,cy+2+Math.sin(an)*3,STEEL[6]);}}
@@ -2232,7 +2237,7 @@ function drawFighter(f){
   C(k.elB,k.hB,2.2,1.9,zoneShader(f,'armB',1,CLOTH,.66,{lames:3}));
   C(k.hB,k.hB,1.9,1.9,gauntlet(f,'armB',.66));
   const na=(((f.pose.sa+(f.mouseCtl?0:(f.defl||0)))%360)+540)%360-180,behind=(na<-140||na>155)&&f.pose.inv<0.5;
-  if(behind&&!f.swordDropped)drawBlade(FB,k.G0,k.dirB,f.swordBlood,f.wpn.gilt?GILT:f.trim,f.id,k.len,f.wpn.head||f.wpn.kind);
+  if(behind&&!f.swordDropped)(FLAIL_CUR=f.fl||null,drawBlade(FB,k.G0,k.dirB,f.swordBlood,f.wpn.gilt?GILT:f.trim,f.id,k.len,f.wpn.head||f.wpn.kind),FLAIL_CUR=null);
   C(k.hipF,k.knF,3.2,2.8,zoneShader(f,'legs',0,HOSE,1,{lames:4}));
   C(k.knF,k.anF,2.7,2.1,zoneShader(f,'legs',1,HOSE,1,{lames:3}));
   C(k.knF,k.knF,2.3,2.3,zoneShader(f,'legs',0,HOSE,1,{plateOnly:true}));
@@ -2242,7 +2247,7 @@ function drawFighter(f){
   C(k.headA,k.headB,4.3,4.6,headShader(f));
   plume(f,k);
   drawShield(f,k);
-  if(!behind&&!f.swordDropped)drawBlade(FB,k.G0,k.dirB,f.swordBlood,f.wpn.gilt?GILT:f.trim,f.id,k.len,f.wpn.head||f.wpn.kind);
+  if(!behind&&!f.swordDropped)(FLAIL_CUR=f.fl||null,drawBlade(FB,k.G0,k.dirB,f.swordBlood,f.wpn.gilt?GILT:f.trim,f.id,k.len,f.wpn.head||f.wpn.kind),FLAIL_CUR=null);
   C(k.shF,k.elF,2.6,2.3,zoneShader(f,'armF',0,CLOTH,1,{lames:3}));
   C(k.elF,k.hF,2.3,1.9,zoneShader(f,'armF',1,CLOTH,1,{lames:3}));
   C(k.elF,k.elF,2.2,2.2,zoneShader(f,'armF',1,CLOTH,1,{plateOnly:true}));
@@ -2836,6 +2841,12 @@ function swordPhysics(f,o,dt){
   f.swCool-=dt;f.swoCool-=dt;
   const inv=f.pose.inv>0.5,spd=f.tipV;aSwish(f,spd);
   if(spd>230&&f.swoCool<=0){aSwoosh(inv?'murder':'slash',panOf(f.x),spd);f.swoCool=.3;}
+  if(f.wpn&&f.wpn.kind==='flail'){const b=f.fl;if(!b||f.swCool>0||(b.spd||0)<130||(f.state!=='idle'&&f.state!=='walk'))return;const pt=[b.x,b.y],bs=b.spd;
+    if(o.j.shc){const rs=psd(pt,o.j.shT,o.j.shB2);if(rs[0]<(o.j.shR||4)+1.5&&!(bs>200&&Math.random()<.5)){f.swCool=.3;const pn=panOf(o.x),pw=Math.min(1.8,bs/360);o.st=Math.max(0,o.st-(5+10*pw));o.vx+=f.dir*(25+30*pw);if(o.st<12&&o.state!=='exhausted'&&o.state!=='stagger'){o.state='stagger';o.stagT=.45;}
+      sparks(pt[0],pt[1],5,f.dir,.8);aThud(.7,pn);b.vx*=-.35;b.vy*=-.35;return;}}
+    if(!o.swordDropped&&o.j.pom&&o.j.tip){const rb=psd(pt,o.j.pom,o.j.tip);if(rb[0]<1.8){f.swCool=.25;sparks(pt[0],pt[1],6,f.dir,.9);aClang(rand(900,1200),Math.min(.8,.3+bs/700),1,panOf(o.x));b.vx*=-.3;b.vy*=-.3;return;}}
+    const zk=bodyHit(o,pt);if(zk){strike(f,o,zk,pt,Math.min(bs*1.15,720),false);b.vx*=-.25;b.vy*=-.25;}
+    return;}
   const hitSpd=f.lungeT>0?spd:(f.tipVrel??spd);
   if(f.swCool>0||hitSpd<90||(f.state!=='idle'&&f.state!=='walk')||G.time-(f.pushT??-9)<.12)return;
   const pb=f.pb,cb=f.cb,op=o.pb,oc=o.cb;
@@ -2845,7 +2856,7 @@ function swordPhysics(f,o,dt){
       if(zk){
         // his blade in the way? check the path from the hand to the contact point, and the path the contact point swept this frame
         if(o.j.shc){const hand=lerp2(f.pb?f.pb[0]:a,cb[0],s),rs=segDist(hand,pt,o.j.shT,o.j.shB2);
-          if(rs.d<o.j.shR&&!(f.wpn.kind==='flail'&&Math.random()<.4)){f.swCool=.3;const pn=panOf(o.x);{const hv=f.wpn&&['axe','mace','hammer','morning','flail','bill'].includes(f.wpn.kind)?1.6:1,pw=Math.min(1.6,spd/380)*hv*Math.max(.7,((f.wpn&&f.wpn.wt)||2)/2.5);o.st=Math.max(0,o.st-(4+9*pw));o.vx+=f.dir*(20+30*pw);if(o.st<12&&o.state!=='exhausted'&&o.state!=='stagger'){o.state='stagger';o.stagT=.45;}}sparks(rs.p[0],rs.p[1],o.shield.kind==='buckler'?10:4,f.dir,.8);
+          if(rs.d<o.j.shR){f.swCool=.3;const pn=panOf(o.x);{const hv=f.wpn&&['axe','mace','hammer','morning','flail','bill'].includes(f.wpn.kind)?1.6:1,pw=Math.min(1.6,spd/380)*hv*Math.max(.7,((f.wpn&&f.wpn.wt)||2)/2.5);o.st=Math.max(0,o.st-(4+9*pw));o.vx+=f.dir*(20+30*pw);if(o.st<12&&o.state!=='exhausted'&&o.state!=='stagger'){o.state='stagger';o.stagT=.45;}}sparks(rs.p[0],rs.p[1],o.shield.kind==='buckler'?10:4,f.dir,.8);
             if(o.shield.kind==='buckler')aClang(rand(700,950),.6,.8,pn);else{aThud(.6,pn);if(ok())nz(now(),.08,'bandpass',600,1.5,.3,.002,pn);}
             if(G.time-(o.blkLogT||0)>1.2){o.blkLogT=G.time;log(`${o.name} catches it on his ${o.shield.kind==='buckler'?'buckler':'shield'}.`,'mute');}return;}}
         if(!o.swordDropped&&op&&oc){const o1=lerp2(op[2],oc[2],s),o2=lerp2(op[1],oc[1],s),hand=lerp2(f.pb?f.pb[0]:a,cb[0],s);
@@ -2947,6 +2958,13 @@ function collide(dt){
 }
 function interact(dt){
   const a=G.f[0],b=G.f[1];
+  for(const f of G.f){if(!(f.wpn&&f.wpn.kind==='flail')||!f.j||f.swordDropped){f.fl=null;continue;}
+    const A=[f.j.G0[0]+f.j.dirB[0]*(f.j.len||23),f.j.G0[1]+f.j.dirB[1]*(f.j.len||23)];
+    if(!f.fl)f.fl={x:A[0],y:A[1]+FLAIL_L,vx:0,vy:0};const b=f.fl,steps=3,h=dt/steps;
+    const A0=f.flA||A,steps2=steps;for(let n=0;n<steps;n++){const An=[A0[0]+(A[0]-A0[0])*(n+1)/steps,A0[1]+(A[1]-A0[1])*(n+1)/steps],px=b.x,py=b.y;b.vy+=320*h;b.vx*=.996;b.vy*=.996;b.x+=b.vx*h;b.y+=b.vy*h;
+      if(b.y>GROUND-2){b.y=GROUND-2;b.vy*=-.3;b.vx*=.8;}
+      const dx=b.x-An[0],dy=b.y-An[1],D=Math.hypot(dx,dy);if(D>FLAIL_L){const nx=dx/D,ny=dy/D;b.x=An[0]+nx*FLAIL_L;b.y=An[1]+ny*FLAIL_L;b.vx=(b.x-px)/h;b.vy=(b.y-py)/h;}}
+    f.flA=A;const sp=Math.hypot(b.vx,b.vy);if(sp>900){b.vx*=900/sp;b.vy*=900/sp;}b.spd=Math.min(sp,900);}
   for(const f of G.f){const inv=f.pose.inv>0.5,i=inv?2:1,bx=f.x-(f.lastX??f.x);f.tipV=Math.hypot(f.cb[i][0]-f.pb[i][0],f.cb[i][1]-f.pb[i][1])/dt;f.tipVrel=Math.hypot(f.cb[i][0]-f.pb[i][0]-bx,f.cb[i][1]-f.pb[i][1])/dt;}
   if(!a.dead&&!b.dead){swordPhysics(a,b,dt);swordPhysics(b,a,dt);}
   for(const at of G.f){const df=G.f[1-at.id];
@@ -3591,8 +3609,14 @@ function crestURL(ci){if(CRESTS[ci])return CRESTS[ci];const C=CITIES[ci],w=15,h=
   x.putImageData(id,0,0);return CRESTS[ci]=`url('${cv.toDataURL()}')`;}
 // ---------- version and update notes ----------
 // Bump GAME_VERSION and add an entry at the top of CHANGELOG for every update: players see the popup once per version.
-const GAME_VERSION='1.24.2';
+const GAME_VERSION='1.25.0';
 const CHANGELOG=[
+  {v:'1.25.0',date:'31 Oct 2026',title:'The flail swings',
+   slides:[{title:'The flail swings',text:'The war flail\'s ball now hangs on a real chain. It falls, trails behind your swing and whips round when you change direction, and it is the ball, not the haft, that does the damage: the faster it is moving, the harder it lands. A shield or a blade in its path stops it.'}],
+   items:['Real chain physics for the war flail','The ball does the damage, harder the faster it swings']},
+  {v:'1.24.3',date:'31 Oct 2026',title:'Esc to pause',
+   slides:[{title:'Esc to pause',text:'The on-screen pause button is gone: your mouse belongs to your sword during a bout. Press Esc (or P) to pause.'}],
+   items:['Removed the on-screen pause button']},
   {v:'1.24.2',date:'31 Oct 2026',title:'Great weapons',
    slides:[{title:'Great weapons',text:'Foes with two-handed weapons now fight like it: they swing their greatswords, great axes and bills in wide cuts instead of poking, and if you crowd them they kick you away harder and further. W and S no longer move your shield; steer it with the right mouse button.'},{title:'Anyone in the lists',text:'Quick duels now pit you against anyone from the road: a barefoot peasant, a militiaman in mail, a knight of any kingdom in full harness, or now and then a king in his royal armour. Every bout is a new opponent, and every one fights with Champion skill.'},{title:'Shields up',text:'Foes with shields now hold them out in front instead of on their chest, and throw them into the path of your blows, high, low or wide.'}],
    items:['Two-handed foes swing instead of thrusting','Harder kicks from two-handed foes','W and S no longer move the shield','Quick duels: random opponents from peasant to king','Foes hold their shields out and put them in the way of your blows']},
@@ -4378,7 +4402,7 @@ function wire(){
   $('mapReset').addEventListener('click',e=>{const b=e.currentTarget;if(b.dataset.arm==='1'){CAMP=newCamp();saveCamp();b.dataset.arm='';b.textContent='New campaign';openMaker(true);return;}
     b.dataset.arm='1';b.textContent='Click again to erase';setTimeout(()=>{b.dataset.arm='';b.textContent='New campaign';},3000);});
   $('resumeBtn').addEventListener('click',e=>{e.currentTarget.blur();togglePause();});
-  $('pauseIcon').addEventListener('click',e=>{e.currentTarget.blur();togglePause();});
+  
   $('restartBtn').addEventListener('click',e=>{e.currentTarget.blur();if(AU.C)AU.C.resume();newBout();});
   $('pMenuBtn').addEventListener('click',e=>{e.currentTarget.blur();if(AU.C)AU.C.resume();if(G.mode==='camp')openCity(G.camp.ci,holdOf(G.camp.lv));else toMenu();});
   for(const id of ['soundBtn','pSoundBtn'])$(id).addEventListener('click',()=>{aInit();toggleMute();});
