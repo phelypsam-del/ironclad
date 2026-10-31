@@ -2703,8 +2703,8 @@ function aiBrain(me,foe,dt){
   const tired=me.st<16;
   if(foe.state==='exhausted')ai.cool=Math.min(ai.cool,.15);
   // run a swing
-  if(ai.sw){const st=ai.sw.steps[ai.sw.i];tx=st.x;ty=st.y;vc.left=!!st.left;vc.right=!!st.right;if(st.lunge&&ai.sw.t===0&&me.st>=14)vc.act={type:'lunge'};ai.sw.t+=dt;
-    if(ai.sw.i>=1&&dist>28)c[tw]=true;
+  if(ai.sw){const st=ai.sw.steps[ai.sw.i];tx=st.x;ty=st.y;vc.left=!!st.left;vc.right=!!st.right;if(st.lunge&&ai.sw.t===0&&me.st>=14){const still=!foe.swordDropped&&foe.j.dirB[0]*foe.dir>.6&&Math.abs(foe.j.tip[0]-me.x)<34;if(!still)vc.act={type:'lunge'};}ai.sw.t+=dt;
+    if(ai.sw.i>=1&&dist>28&&!(inLine&&dist<(foe.wpn?foe.wpn.len:26)+8))c[tw]=true;
     if(ai.sw.t>=st.t){ai.sw.i++;ai.sw.t=0;if(ai.sw.i>=ai.sw.steps.length){ai.sw=null;ai.cool=rand(D.cool[0],D.cool[1])*.65;}}
     apply();return c;}
   // tactics: press when winning, give ground when losing, back off to catch breath, hold distance and counter
@@ -2729,6 +2729,7 @@ function aiBrain(me,foe,dt){
   if(seize)canAtk=true;
   if(inLine&&dist<D.pref+32)canAtk=true;
   if(ai.stallT>1.6&&dist<D.pref+40){canAtk=true;ai.cool=Math.min(ai.cool,0);ai.stallT=0;}
+  {const fl=(foe.wpn?foe.wpn.len:26)+8;if(inLine&&dist<fl&&!ai.sw){c[tw]=false;if(dist<fl-6&&!((aw==='left'&&me.x<44)||(aw==='right'&&me.x>WW-44)))c[aw]=true;}}
   if((!tired||dist<=D.pref)&&ai.cool<=0&&canAtk&&(me.state==='idle'||me.state==='walk')){
     if(dist<30&&Math.random()<(foe.shield&&(foe.shMode||foe.shVel>0||ai.shTurtle>.6)?.2+.3*D.smart:.18)){c.kick=true;ai.cool=rand(D.cool[0],D.cool[1]);}
     else{ai.sw=aiPlan(me,foe,D,inLine);ai.ripT=0;if(Math.random()<.18)aWarCry(me,panOf(me.x));}
@@ -2827,7 +2828,8 @@ function swordPhysics(f,o,dt){
   f.swCool-=dt;f.swoCool-=dt;
   const inv=f.pose.inv>0.5,spd=f.tipV;aSwish(f,spd);
   if(spd>230&&f.swoCool<=0){aSwoosh(inv?'murder':'slash',panOf(f.x),spd);f.swoCool=.3;}
-  if(f.swCool>0||spd<90||(f.state!=='idle'&&f.state!=='walk'))return;
+  const hitSpd=f.lungeT>0?spd:(f.tipVrel??spd);
+  if(f.swCool>0||hitSpd<90||(f.state!=='idle'&&f.state!=='walk')||G.time-(f.pushT??-9)<.12)return;
   const pb=f.pb,cb=f.cb,op=o.pb,oc=o.cb;
   for(const s of [.34,.67,1]){
     const a=lerp2(pb[0],cb[0],s),b=inv?lerp2(pb[2],cb[2],s):lerp2(pb[1],cb[1],s);
@@ -2844,11 +2846,11 @@ function swordPhysics(f,o,dt){
           if(r.d<1.4){f.swCool=.3;sparks(r.p[0],r.p[1],spd>220?12:5,f.dir,.9);aClang(rand(1000,1300),Math.min(.85,.3+spd/700),1,panOf(o.x));
             if(spd>220){G.hitstop=Math.max(G.hitstop,.04);G.shake=Math.max(G.shake,1.2);}
             if(G.time-(o.blkLogT||0)>1.2){o.blkLogT=G.time;log(`${o.name} takes the blow on his blade.`,'mute');}return;}}
-        strike(f,o,zk,pt,spd,inv);return;}}
+        strike(f,o,zk,pt,hitSpd,inv);return;}}
   }
 }
 function aScrape(pan){if(!ok())return;const t=now();nz(t,.12,'bandpass',rand(3000,4500),5,.08,.01,pan,rand(5000,7000));nz(t,.1,'highpass',6000,.7,.03,.01,pan);}
-function rotBlade(f,dts,dt){const da=dts*f.dir;f.pushed=(f.pushed||0)+Math.abs(da);
+function rotBlade(f,dts,dt){const da=dts*f.dir;f.pushed=(f.pushed||0)+Math.abs(da);f.pushT=G.time;
   if(f.mouseCtl){f.msw.sa+=da;f.pose.sa+=da;}else{f.defl=clamp((f.defl||0)+da,-95,95);f.deflV=(f.deflV||0)+da/dt*0.08;}
   setBlade(f.j,f.dir,f.pose.sa+(f.mouseCtl?0:f.defl),f.pose.inv>0.5);}
 function bladePower(f,cp,bind){const r=cp?Math.hypot(cp[0]-f.j.hF[0],cp[1]-f.j.hF[1]):14,lev=clamp(14/Math.max(5,r),.6,2.5);
@@ -3578,8 +3580,11 @@ function crestURL(ci){if(CRESTS[ci])return CRESTS[ci];const C=CITIES[ci],w=15,h=
   x.putImageData(id,0,0);return CRESTS[ci]=`url('${cv.toDataURL()}')`;}
 // ---------- version and update notes ----------
 // Bump GAME_VERSION and add an entry at the top of CHANGELOG for every update: players see the popup once per version.
-const GAME_VERSION='1.23.0';
+const GAME_VERSION='1.23.1';
 const CHANGELOG=[
+  {v:'1.23.1',date:'31 Oct 2026',title:'No more free kills',
+   slides:[{title:'No more free kills',text:'Foes no longer walk onto a held sword point. They keep their distance from it and try to beat it aside before closing in. A blade only wounds when it is actually swung or driven home: holding it out, walking forward with it, or having it shoved aside by someone running into it no longer cuts.'}],
+   items:['Foes respect a held point','Only real swings and thrusts wound']},
   {v:'1.23.0',date:'31 Oct 2026',title:'Every man his own kit',
    slides:[{title:'Every man his own kit',text:'Your opponents now arm themselves from their own kingdom\'s market. Englishmen come at you with hatchets, bills and St George jupons, Frenchmen in klappvisors and chevrons with war hammers, Germans with morning stars under peacock crests, brothers of the Order with sparths and flails, and Byzantines in scale with Dane axes and sabres. The deeper into a kingdom you go, the finer the gear they carry.'}],
    items:['Foes use weapons and armour from their own kingdom','Better gear the deeper you go']},
